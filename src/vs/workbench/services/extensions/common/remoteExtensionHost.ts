@@ -88,6 +88,7 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 	}
 
 	public start(): Promise<IMessagePassingProtocol> {
+		this._logService.info('>>> STARTING REMOT EXT HOST');
 		const options: IConnectionOptions = {
 			commit: this._productService.commit,
 			socketFactory: this._socketFactory,
@@ -101,6 +102,8 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 			logService: this._logService,
 			ipcLogger: null
 		};
+		this._logService.info('>>> RESOLVING AUTH');
+
 		return this.remoteAuthorityResolverService.resolveAuthority(this._initDataProvider.remoteAuthority).then((resolverResult) => {
 
 			const startParams: IRemoteExtensionHostStartParams = {
@@ -124,11 +127,13 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 			if (!debugOk) {
 				startParams.break = false;
 			}
-
+			this._logService.info('>>> CONNECTING REMOTE AGENT EXT HOST');
 			return connectRemoteAgentExtensionHost(options, startParams).then(result => {
 				let { protocol, debugPort } = result;
 				const isExtensionDevelopmentDebug = typeof debugPort === 'number';
 				if (debugOk && this._environmentService.isExtensionDevelopment && this._environmentService.debugExtensionHost.debugId && debugPort) {
+					this._logService.info('>>> ATTACHING DEBUG');
+
 					this._extensionHostDebugService.attachSession(this._environmentService.debugExtensionHost.debugId, debugPort, this._initDataProvider.remoteAuthority);
 				}
 
@@ -145,6 +150,7 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 				// 1) wait for the incoming `ready` event and send the initialization data.
 				// 2) wait for the incoming `initialized` event.
 				return new Promise<IMessagePassingProtocol>((resolve, reject) => {
+					this._logService.info('>>> WAITING FOR MESSAGE');
 
 					let handle = setTimeout(() => {
 						reject('timeout');
@@ -153,6 +159,7 @@ export class RemoteExtensionHost extends Disposable implements IExtensionHost {
 					let logFile: URI;
 
 					const disposable = protocol.onMessage(msg => {
+						this._logService.info('>>> PROTOCOL MESSAGE RECEIVED', msg.toString());
 
 						if (isMessageOfType(msg, MessageType.Ready)) {
 							// 1) Extension Host is ready to receive messages, initialize it

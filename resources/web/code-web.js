@@ -4,6 +4,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+Object.defineProperty(exports, '__esModule', { value: true });
 
 // @ts-check
 
@@ -31,6 +32,8 @@ const WEB_MAIN = path.join(APP_ROOT, 'src', 'vs', 'code', 'browser', 'workbench'
 
 // This is useful to simulate real world CORS
 const ALLOWED_CORS_ORIGINS = [
+	'http://localhost:8082',
+	'http://127.0.0.1:8082',
 	'http://localhost:8081',
 	'http://127.0.0.1:8081',
 	'http://localhost:8080',
@@ -41,15 +44,17 @@ const WEB_PLAYGROUND_VERSION = '0.0.12';
 
 const args = minimist(process.argv, {
 	boolean: [
-		'no-launch',
+		'launch',
 		'help',
 		'verbose',
 		'wrap-iframe',
 		'enable-sync',
 	],
 	string: [
+		'server',
 		'scheme',
 		'host',
+		'remote-authority',
 		'port',
 		'local_port',
 		'extension',
@@ -61,12 +66,13 @@ const args = minimist(process.argv, {
 if (args.help) {
 	console.log(
 		'yarn web [options]\n' +
-		' --no-launch      Do not open VSCode web in the browser\n' +
+		' --launch         Open VSCode web in the browser\n' +
 		' --wrap-iframe    Wrap the Web Worker Extension Host in an iframe\n' +
 		' --enable-sync    Enable sync by default\n' +
 		' --scheme         Protocol (https or http)\n' +
 		' --host           Remote host\n' +
 		' --port           Remote/Local port\n' +
+		' --remote-authority Remote auth\n' +
 		' --local_port     Local port override\n' +
 		' --secondary-port Secondary port\n' +
 		' --extension      Path of an extension to include\n' +
@@ -221,8 +227,10 @@ const mapCallbackUriToRequestId = new Map();
 /**
  * @param req {http.IncomingMessage}
  * @param res {http.ServerResponse}
+ * @param webConfigJSON {import('../../src/vs/workbench/workbench.web.api').IServerWorkbenchConstructionOptions}
+ * @param webConfigJSON undefined
  */
-const requestHandler = (req, res) => {
+const requestHandler = (req, res, webConfigJSON) => {
 	const parsedUrl = url.parse(req.url, true);
 	const pathname = parsedUrl.pathname;
 
@@ -253,6 +261,9 @@ const requestHandler = (req, res) => {
 			return handleExtension(req, res, parsedUrl);
 		}
 		if (pathname === '/') {
+			if (args.server) {
+				return handleRootFromServer(req, res, webConfigJSON);
+			}
 			// main web
 			return handleRoot(req, res);
 		} else if (pathname === '/callback') {
@@ -261,8 +272,11 @@ const requestHandler = (req, res) => {
 		} else if (pathname === '/fetch-callback') {
 			// callback fetch support
 			return handleFetchCallback(req, res, parsedUrl);
+		} else if (pathname === '/vscode-remote-resource') {
+			// callback fetch support
+			return handleRemoteResource(req, res, parsedUrl);
 		} else if (pathname === '/builtin') {
-			// builtin extnesions JSON
+			// builtin extensions JSON
 			return handleBuiltInExtensions(req, res, parsedUrl);
 		}
 
@@ -274,26 +288,28 @@ const requestHandler = (req, res) => {
 	}
 };
 
-const server = http.createServer(requestHandler);
-server.listen(LOCAL_PORT, () => {
-	if (LOCAL_PORT !== PORT) {
-		console.log(`Operating location at         http://0.0.0.0:${LOCAL_PORT}`);
-	}
-	console.log(`Web UI available at           ${SCHEME}://${AUTHORITY}`);
-});
-server.on('error', err => {
-	console.error(`Error occurred in server:`);
-	console.error(err);
-});
+if (!args.server) {
+	const server = http.createServer(requestHandler);
+	server.listen(LOCAL_PORT, () => {
+		if (LOCAL_PORT !== PORT) {
+			console.log(`Operating location at         http://0.0.0.0:${LOCAL_PORT}`);
+		}
+		console.log(`Web UI available at           ${SCHEME}://${AUTHORITY}`);
+	});
+	server.on('error', err => {
+		console.error(`Error occurred in server:`);
+		console.error(err);
+	});
 
-const secondaryServer = http.createServer(requestHandler);
-secondaryServer.listen(SECONDARY_PORT, () => {
-	console.log(`Secondary server available at ${SCHEME}://${HOST}:${SECONDARY_PORT}`);
-});
-secondaryServer.on('error', err => {
-	console.error(`Error occurred in server:`);
-	console.error(err);
-});
+	const secondaryServer = http.createServer(requestHandler);
+	secondaryServer.listen(SECONDARY_PORT, () => {
+		console.log(`Secondary server available at ${SCHEME}://${HOST}:${SECONDARY_PORT}`);
+	});
+	secondaryServer.on('error', err => {
+		console.error(`Error occurred in server:`);
+		console.error(err);
+	});
+}
 
 /**
  * @param {import('http').IncomingMessage} req
@@ -315,6 +331,20 @@ async function handleBuiltInExtensions(req, res, parsedUrl) {
 	const { extensions } = await builtInExtensionsPromise;
 	res.writeHead(200, { 'Content-Type': 'application/json' });
 	return res.end(JSON.stringify(extensions));
+}
+
+/**
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param {import('url').UrlWithParsedQuery} parsedUrl
+ */
+async function handleRemoteResource(req, res, parsedUrl) {
+	const { path } = parsedUrl.query;
+
+	if (path) {
+		res.setHeader('Content-Type', getMediaMime(path));
+		res.end(await readFile(path));
+	}
 }
 
 /**
@@ -420,6 +450,7 @@ async function handleRoot(req, res) {
 			? req.headers['host'].replace(':' + PORT, ':' + SECONDARY_PORT)
 			: `${HOST}:${SECONDARY_PORT}`
 	);
+
 	const webConfigJSON = {
 		folderUri: folderUri,
 		additionalBuiltinExtensions,
@@ -450,6 +481,52 @@ async function handleRoot(req, res) {
 		'Content-Type': 'text/html',
 		'Content-Security-Policy': 'require-trusted-types-for \'script\';'
 	};
+	res.writeHead(200, headers);
+	return res.end(data);
+}
+
+/**
+ * @param {import('http').IncomingMessage} req
+ * @param {import('http').ServerResponse} res
+ * @param webConfigJSON {import('../../src/vs/workbench/workbench.web.api').IServerWorkbenchConstructionOptions}
+ */
+async function handleRootFromServer(req, res, webConfigJSON) {
+	// const { extensions: builtInExtensions } = await builtInExtensionsPromise;
+	// const { extensions: additionalBuiltinExtensions, locations: staticLocations } = await commandlineProvidedExtensionsPromise;
+
+	// const dedupedBuiltInExtensions = [];
+	// for (const builtInExtension of builtInExtensions) {
+	// 	const extensionId = `${builtInExtension.packageJSON.publisher}.${builtInExtension.packageJSON.name}`;
+	// 	if (staticLocations[extensionId]) {
+	// 		fancyLog(`${ansiColors.magenta('BuiltIn extensions')}: Ignoring built-in ${extensionId} because it was overridden via --extension argument`);
+	// 		continue;
+	// 	}
+
+	// 	dedupedBuiltInExtensions.push(builtInExtension);
+	// }
+
+	if (args.verbose) {
+		fancyLog(`${ansiColors.magenta('BuiltIn extensions')}: ${dedupedBuiltInExtensions.map(e => path.basename(e.extensionPath)).join(', ')}`);
+		fancyLog(`${ansiColors.magenta('Additional extensions')}: ${additionalBuiltinExtensions.map(e => path.basename(e.extensionLocation.path)).join(', ') || 'None'}`);
+	}
+
+	if (req.headers['x-forwarded-host']) {
+		// support for running in codespace => no iframe wrapping
+		delete webConfigJSON.webWorkerExtensionHostIframeSrc;
+	}
+	const authSessionInfo = undefined;
+
+	const data = (await readFile(WEB_MAIN)).toString()
+		.replace('{{WORKBENCH_WEB_CONFIGURATION}}', () => escapeAttribute(JSON.stringify(webConfigJSON))) // use a replace function to avoid that regexp replace patterns ($&, $0, ...) are applied
+		// .replace('{{WORKBENCH_BUILTIN_EXTENSIONS}}', () => escapeAttribute(JSON.stringify(dedupedBuiltInExtensions)))
+		.replace('{{WORKBENCH_AUTH_SESSION}}', () => authSessionInfo ? escapeAttribute(JSON.stringify(authSessionInfo)) : '')
+		.replace('{{WEBVIEW_ENDPOINT}}', '');
+
+	const headers = {
+		'Content-Type': 'text/html',
+		'Content-Security-Policy': 'require-trusted-types-for \'script\';'
+	};
+
 	res.writeHead(200, headers);
 	return res.end(data);
 }
@@ -613,7 +690,7 @@ const mapExtToMediaMimes = {
 function getMediaMime(forPath) {
 	const ext = path.extname(forPath);
 
-	return mapExtToMediaMimes[ext.toLowerCase()];
+	return mapExtToMediaMimes[ext.toLowerCase()] || 'text/plain';
 }
 
 /**
@@ -655,3 +732,5 @@ async function serveFile(req, res, filePath, responseHeaders = Object.create(nul
 if (args.launch !== false) {
 	opn(`${SCHEME}://${HOST}:${PORT}`);
 }
+
+exports.requestHandler = requestHandler;

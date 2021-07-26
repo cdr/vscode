@@ -175,6 +175,16 @@ const enum ProtocolMessageType {
 	ReplayRequest = 6
 }
 
+const ProtocolMessageTypeToLabel: { [K in ProtocolMessageType]: string } = {
+	0: 'None',
+	1: 'Regular',
+	2: 'Control',
+	3: 'Ack',
+	4: 'KeepAlive',
+	5: 'Disconnect',
+	6: 'ReplayRequest'
+};
+
 export const enum ProtocolConstants {
 	HeaderLength = 13,
 	/**
@@ -219,6 +229,10 @@ class ProtocolMessage {
 	public get size(): number {
 		return this.data.byteLength;
 	}
+
+	public get label(): string {
+		return ProtocolMessageTypeToLabel[this.type as ProtocolMessageType] || 'Unknown';
+	}
 }
 
 class ProtocolReader extends Disposable {
@@ -262,8 +276,6 @@ class ProtocolReader extends Disposable {
 			const buff = this._incomingData.read(this._state.readLen);
 
 			if (this._state.readHead) {
-				// buff is the header
-
 				// save new state => next time will read the body
 				this._state.readHead = false;
 				this._state.readLen = buff.readUInt32BE(9);
@@ -703,7 +715,10 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 		this._socketReader = new ProtocolReader(this._socket);
 		this._socketDisposables.push(this._socketReader);
 		this._socketDisposables.push(this._socketReader.onMessage(msg => this._receiveMessage(msg)));
-		this._socketDisposables.push(this._socket.onClose((e) => this._onSocketClose.fire(e)));
+		this._socketDisposables.push(this._socket.onClose((e) => {
+			console.log('SOCKET DISPOSABLE CLOSE', (e as WebSocketCloseEvent).reason);
+			return this._onSocketClose.fire(e);
+		}));
 		if (initialChunk) {
 			this._socketReader.acceptChunk(initialChunk);
 		}
@@ -790,6 +805,11 @@ export class PersistentProtocol implements IMessagePassingProtocol {
 
 	public getSocket(): ISocket {
 		return this._socket;
+	}
+
+	// NOTE@coder: add setSocket
+	public setSocket(socket: ISocket) {
+		this._socket = socket;
 	}
 
 	public getMillisSinceLastIncomingData(): number {

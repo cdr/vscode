@@ -17,12 +17,14 @@ import { IInitData } from 'vs/workbench/api/common/extHost.protocol';
 import { MessageType, createMessageOfType, isMessageOfType, IExtHostSocketMessage, IExtHostReadyMessage, IExtHostReduceGraceTimeMessage, ExtensionHostExitCode } from 'vs/workbench/services/extensions/common/extensionHostProtocol';
 import { ExtensionHostMain, IExitFn } from 'vs/workbench/services/extensions/common/extensionHostMain';
 import { VSBuffer } from 'vs/base/common/buffer';
-import { IURITransformer, URITransformer, IRawURITransformer } from 'vs/base/common/uriIpc';
+import { IRawURITransformer, IURITransformer, URITransformer } from 'vs/base/common/uriIpc';
 import { Promises } from 'vs/base/node/pfs';
+import { createServerURITransformer } from 'vs/base/common/uriServer';
 import { realpath } from 'vs/base/node/extpath';
 import { IHostUtils } from 'vs/workbench/api/common/extHostExtensionService';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { boolean } from 'vs/editor/common/config/editorOptions';
+import * as proxyAgent from 'vs/base/node/proxy_agent';
 
 import 'vs/workbench/api/common/extHost.common.services';
 import 'vs/workbench/api/node/extHost.node.services';
@@ -122,6 +124,7 @@ function _createExtHostProtocol(): Promise<PersistentProtocol> {
 				if (msg && msg.type === 'VSCODE_EXTHOST_IPC_SOCKET') {
 					const initialDataChunk = VSBuffer.wrap(Buffer.from(msg.initialDataChunk, 'base64'));
 					let socket: NodeSocket | WebSocketNodeSocket;
+
 					if (msg.skipWebSocketFrames) {
 						socket = new NodeSocket(handle);
 					} else {
@@ -313,12 +316,16 @@ function connectToRenderer(protocol: IMessagePassingProtocol): Promise<IRenderer
 			c({ protocol, initData });
 		});
 
+		console.log('>>> WANT TO SEND READY');
 		// Tell the outside that we are ready to receive messages
 		protocol.send(createMessageOfType(MessageType.Ready));
 	});
 }
 
 export async function startExtensionHostProcess(): Promise<void> {
+	// NOTE@coder: add proxy agent patch
+	proxyAgent.monkeyPatch(true);
+
 	performance.mark(`code/extHost/willConnectToRenderer`);
 	const protocol = await createExtHostProtocol();
 	performance.mark(`code/extHost/didConnectToRenderer`);
@@ -340,13 +347,18 @@ export async function startExtensionHostProcess(): Promise<void> {
 
 	// Attempt to load uri transformer
 	let uriTransformer: IURITransformer | null = null;
-	if (initData.remote.authority && args.uriTransformerPath) {
-		try {
-			const rawURITransformerFactory = <any>require.__$__nodeRequire(args.uriTransformerPath);
-			const rawURITransformer = <IRawURITransformer>rawURITransformerFactory(initData.remote.authority);
-			uriTransformer = new URITransformer(rawURITransformer);
-		} catch (e) {
-			console.error(e);
+
+	if (initData.remote.authority) {
+		if (args.uriTransformerPath) {
+			try {
+				const rawURITransformerFactory = <any>require.__$__nodeRequire(args.uriTransformerPath);
+				const rawURITransformer = <IRawURITransformer>rawURITransformerFactory(initData.remote.authority);
+				uriTransformer = new URITransformer(rawURITransformer);
+			} catch (e) {
+				console.error(e);
+			}
+		} else {
+			uriTransformer = createServerURITransformer(initData.remote.authority);
 		}
 	}
 

@@ -14,7 +14,9 @@ async function createSpdLogLogger(name: string, logfilePath: string, filesize: n
 		_spdlog.setFlushOn(LogLevel.Trace);
 		return _spdlog.createAsyncRotatingLogger(name, logfilePath, filesize, filecount);
 	} catch (e) {
-		console.error(e);
+		// console.error(e);
+		// TODO@coder enable
+		console.error('generic log failure');
 	}
 	return null;
 }

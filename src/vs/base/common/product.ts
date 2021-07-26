@@ -31,6 +31,11 @@ export type ExtensionVirtualWorkspaceSupport = {
 };
 
 export interface IProductConfiguration {
+	/** @coder BEGIN */
+	/** @deprecated Should be replaced with code-oss version. */
+	readonly codeServerVersion?: string;
+	/** @coder END */
+
 	readonly version: string;
 	readonly date?: string;
 	readonly quality?: string;
