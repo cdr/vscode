@@ -143,6 +143,7 @@ export class ExtensionHostConnection extends AbstractConnection {
 			debug: this.startParams.break ? undefined : portNumber,
 			args: ['--type=extensionHost', '--skipWorkspaceStorageLock'],
 			env: <ForkEnvironmentVariables>{
+				...(this.startParams.env || {}),
 				VSCODE_AMD_ENTRYPOINT: 'vs/workbench/services/extensions/node/extensionHostProcess',
 				VSCODE_PIPE_LOGGING: true,
 				VSCODE_VERBOSE_LOGGING: true,
