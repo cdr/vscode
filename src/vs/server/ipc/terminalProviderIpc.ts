@@ -140,11 +140,11 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		};
 
 		// ptyHostService calls getEnvironment in the ptyHost process it creates,
-		// which uses that process's environment. The process spawned doesn't have
-		// VSCODE_IPC_HOOK_CLI in its env, so we add it here.
+		// which uses that process's environment, and adds some variables.
 		const getEnvironment = async (): Promise<platform.IProcessEnvironment> => {
 			const env = await this.ptyService.getEnvironment();
-			env.VSCODE_IPC_HOOK_CLI = process.env['VSCODE_IPC_HOOK_CLI']!;
+			env.VSCODE_IPC_HOOK_CLI = process.env.VSCODE_IPC_HOOK_CLI;
+			env.VSCODE_PROXY_URI = args.resolverEnv?.VSCODE_PROXY_URI || process.env.VSCODE_PROXY_URI;
 			return env;
 		};
 
