@@ -5,6 +5,7 @@
 
 import { createRandomIPCHandle } from 'vs/base/parts/ipc/node/ipc.net';
 import * as http from 'http';
+import { Emitter } from 'vs/base/common/event';
 import * as fs from 'fs';
 import { IExtHostCommands } from 'vs/workbench/api/common/extHostCommands';
 import { IWindowOpenable, IOpenWindowOptions } from 'vs/platform/windows/common/windows';
@@ -13,6 +14,11 @@ import { hasWorkspaceFileExtension } from 'vs/platform/workspaces/common/workspa
 import { ILogService } from 'vs/platform/log/common/log';
 import { tmpdir } from 'os';
 import { join } from 'vs/base/common/path';
+import { URITransformer } from 'vs/base/common/uriIpc';
+import { IDisposable } from 'vs/base/common/lifecycle';
+import { cloneAndChange } from 'vs/base/common/objects';
+import type { RemoteTerminalChannelClient } from 'vs/workbench/contrib/terminal/common/remoteTerminalChannel';
+import { createServerURITransformer } from 'vs/server/uriTransformer';
 
 export interface OpenCommandPipeArgs {
 	type: 'open';
@@ -217,5 +223,78 @@ export class CLIServer extends CLIServerBase {
 		@ILogService logService: ILogService
 	) {
 		super(commands, logService, createRandomIPCHandle());
+	}
+}
+
+interface PendingRequest {
+	readonly resolve: (value: any) => void;
+	readonly reject: (error?: Error) => void;
+}
+
+interface RemoteCommand {
+	reqId: number, commandId: string, commandArgs: any[]
+}
+export class RemoteCommandsExecuter implements ICommandsExecuter, IDisposable {
+	private _lastRequestId = 0;
+
+	/** Pending requests initiated from client via `executeCommand`. */
+	private readonly _pendingRequests = new Map<number, PendingRequest>();
+	private readonly _onExecuteCommand = new Emitter<RemoteCommand>();
+	public readonly onDidExecuteCommand = this._onExecuteCommand.event;
+
+	constructor(
+		private logService: ILogService,
+	) { }
+
+	/** @see `RemoteTerminalChannel#onExecuteCommand` for client-side. */
+	executeCommand<T>(commandId: string, ...commandArgs: any[]): Promise<T> {
+		return new Promise((resolve, reject) => {
+			const reqId = ++this._lastRequestId;
+
+			this._pendingRequests.set(reqId, { resolve, reject });
+
+			this._onExecuteCommand.fire({ reqId, commandId, commandArgs });
+		});
+	}
+
+	public sendCommandResult: RemoteTerminalChannelClient['sendCommandResult'] = async (reqId, isError, payload) => {
+		const reqData = this._pendingRequests.get(reqId);
+
+		if (!reqData) {
+			this.logService.warn('[Remote command]', `Expected pending command ${reqId}`, { isError });
+			return;
+		}
+
+		this._pendingRequests.delete(reqId);
+
+		return isError ? reqData.reject(payload) : reqData.resolve(payload);
+	};
+
+	dispose() {
+		this._pendingRequests.clear();
+	}
+}
+export class RemoteCLIServer extends CLIServerBase {
+	private uriTransformer: URITransformer;
+
+	constructor(
+		remoteAuthority: string,
+		commandsExecutor: ICommandsExecuter,
+		@ILogService logService: ILogService
+	) {
+		super({
+			executeCommand: (id, args) => {
+				const commandArgs = cloneAndChange(args, value => {
+					if (value instanceof URI) {
+						return this.uriTransformer.transformOutgoingURI(value);
+					}
+					return;
+				});
+
+				return commandsExecutor.executeCommand(id, ...commandArgs);
+			}
+		}, logService, createRandomIPCHandle());
+
+		this.uriTransformer = createServerURITransformer(remoteAuthority);
 	}
 }

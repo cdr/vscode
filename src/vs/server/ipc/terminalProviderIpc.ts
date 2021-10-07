@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as os from 'os';
-import { Emitter, Event } from 'vs/base/common/event';
+import { Event } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
-import { cloneAndChange, deepClone } from 'vs/base/common/objects';
+import { deepClone } from 'vs/base/common/objects';
 import { IProcessEnvironment } from 'vs/base/common/platform';
 import { URI } from 'vs/base/common/uri';
-import { IURITransformer, transformIncomingURIs } from 'vs/base/common/uriIpc';
+import { transformIncomingURIs } from 'vs/base/common/uriIpc';
 import { findEvent, findEventHandler, IServerChannel } from 'vs/base/parts/ipc/common/ipc';
-import { createRandomIPCHandle } from 'vs/base/parts/ipc/node/ipc.net';
 import { getConfigurationValue } from 'vs/platform/configuration/common/configuration';
 import { ILogService } from 'vs/platform/log/common/log';
 import product from 'vs/platform/product/common/product';
@@ -21,7 +20,7 @@ import { toWorkspaceFolder, Workspace } from 'vs/platform/workspace/common/works
 import { VariableResolverService } from 'vs/server/services/variableResolverService';
 import { createServerURITransformer } from 'vs/server/uriTransformer';
 import { SimpleConfigProvider } from 'vs/workbench/api/common/extHostConfiguration';
-import { CLIServerBase } from 'vs/workbench/api/node/extHostCLIServer';
+import { CLIServer, RemoteCLIServer, RemoteCommandsExecuter } from 'vs/workbench/api/node/extHostCLIServer';
 import { IEnvironmentVariableCollection } from 'vs/workbench/contrib/terminal/common/environmentVariable';
 import { MergedEnvironmentVariableCollection } from 'vs/workbench/contrib/terminal/common/environmentVariableCollection';
 import { deserializeEnvironmentVariableCollection } from 'vs/workbench/contrib/terminal/common/environmentVariableShared';
@@ -29,20 +28,6 @@ import * as terminal from 'vs/workbench/contrib/terminal/common/remoteTerminalCh
 import * as terminalEnvironment from 'vs/workbench/contrib/terminal/common/terminalEnvironment';
 import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 
-interface PendingRequest {
-	resolve: (value: any) => void;
-	reject: (error?: Error) => void;
-	uriTransformer: IURITransformer
-}
-
-interface RemoteCommand {
-	reqId: number, commandId: string, commandArgs: any[]
-}
-
-/**
- * @remark See `RemoteTerminalChannel#sendCommandResult`
- */
-type SendCommandResult = terminal.RemoteTerminalChannelClient['sendCommandResult'];
 
 /**
  * Server-side equivalent of `RemoteTerminalChannel` and `LocalTerminalService`
@@ -50,27 +35,9 @@ type SendCommandResult = terminal.RemoteTerminalChannelClient['sendCommandResult
  * however there's enough nuance here that it should be avoided.
  */
 export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnectionContext>, IDisposable {
-	private readonly _pendingRequests = new Map<number, PendingRequest>();
-	private readonly _onExecuteCommand = new Emitter<RemoteCommand>();
-	private _lastRequestId = 0;
-
-	/** See `RemoteTerminalChannel#onExecuteCommand` for client-side. */
-	private executeCommand(uriTransformer: IURITransformer, commandId: string, args: any[]): Promise<any> {
-		return new Promise((resolve, reject) => {
-			const reqId = ++this._lastRequestId;
-
-			this._pendingRequests.set(reqId, { resolve, reject, uriTransformer });
-
-			const commandArgs = cloneAndChange(args, value => {
-				if (value instanceof URI) {
-					return uriTransformer.transformOutgoingURI(value);
-				}
-				return;
-			});
-
-			this._onExecuteCommand.fire({ reqId, commandId, commandArgs });
-		});
-	}
+	private logPrefix = '[TerminalProviderChannel]';
+	private persistedTerminals = new Map<number, CLIServer>();
+	private remoteCommandsExecuter = new RemoteCommandsExecuter(this.logService);
 
 	public constructor(
 		private readonly uriIdentityService: IUriIdentityService,
@@ -78,13 +45,11 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		private readonly logService: ILogService,
 	) { }
 
-	private logPrefix = '[TerminalProviderChannel]';
-
 	public listen(context: RemoteAgentConnectionContext, eventName: string, args: any): Event<any> {
 		this.logService.debug(this.logPrefix, '[listen]', eventName, args);
 
 		if (eventName === '$onExecuteCommand') {
-			return this._onExecuteCommand.event;
+			return this.remoteCommandsExecuter.onDidExecuteCommand;
 		}
 
 		const event = findEvent(this.ptyService, eventName);
@@ -97,15 +62,15 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		return event;
 	}
 
-	public async call(context: RemoteAgentConnectionContext, command: string, args: any): Promise<any> {
+	public async call({ remoteAuthority }: RemoteAgentConnectionContext, command: string, args: any): Promise<any> {
 		this.logService.debug(this.logPrefix, 'call', command, args);
 
 		if (command === '$createProcess') {
-			return this.createProcess(context.remoteAuthority, args);
+			return this.createProcess(remoteAuthority, args);
 		}
 
 		if (command === '$sendCommandResult') {
-			return this.sendCommandResult(...(args as Parameters<SendCommandResult>));
+			return this.sendCommandResult(...(args as Parameters<TerminalProviderChannel['sendCommandResult']>));
 		}
 
 		const eventHandler = findEventHandler(this.ptyService, command);
@@ -118,6 +83,18 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 			? eventHandler.apply(this.ptyService, args)
 			: eventHandler.call(this.ptyService, args);
 	}
+
+
+	/**
+	 * @see `RemoteTerminalChannel#sendCommandResult`
+	 */
+	sendCommandResult = (remoteAuthority: string, reqId: number, isError: boolean, payload: any): Promise<any> => {
+		return this.remoteCommandsExecuter.sendCommandResult(
+			reqId,
+			isError,
+			transformIncomingURIs(payload, createServerURITransformer(remoteAuthority)),
+		);
+	};
 
 	/**
 	 * @references vs/workbench/api/node/extHostTerminalService.ts
@@ -132,14 +109,10 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 			resolverEnv,
 		} = terminalArgs;
 
-		const uriTransformer = createServerURITransformer(remoteAuthority);
-
-		const cliServer = new CLIServerBase(
-			{
-				executeCommand: (id, ...args) => this.executeCommand(uriTransformer, id, args),
-			},
+		const cliServer = new RemoteCLIServer(
+			remoteAuthority,
+			this.remoteCommandsExecuter,
 			this.logService,
-			createRandomIPCHandle()
 		);
 
 		const processEnv: IProcessEnvironment = {
@@ -226,11 +199,9 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 			terminalArgs.workspaceName,
 		);
 
-		this.ptyService.onProcessExit(e => {
-			if (e.id === persistentTerminalId) {
-				cliServer.dispose();
-			}
-		});
+		this.persistedTerminals.set(persistentTerminalId, cliServer);
+
+		this.ptyService.onProcessExit(this._onProcessExit);
 
 		return {
 			persistentTerminalId,
@@ -238,23 +209,22 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		};
 	}
 
-	private sendCommandResult: SendCommandResult = async (reqId: number, isError: boolean, payload: any) => {
-		const reqData = this._pendingRequests.get(reqId);
+	private _onProcessExit = ({ id: terminalId, event: exitCode }: { id: number, event: number | undefined }) => {
+		const cliServer = this.persistedTerminals.get(terminalId);
 
-		if (!reqData) {
-			this.logService.warn(this.logPrefix, `Expected pending command ${reqId}`, { isError });
+		if (!cliServer) {
+			this.logService.debug(`Terminal process with '${terminalId}' exited with code '${exitCode}', but no CLI server was found with a matching ID.`);
 			return;
 		}
 
-		this._pendingRequests.delete(reqId);
-
-		const result = transformIncomingURIs(payload, reqData.uriTransformer);
-
-		return isError ? reqData.reject(result) : reqData.resolve(result);
+		cliServer.dispose();
 	};
 
-
 	public async dispose(): Promise<void> {
-		this._pendingRequests.clear();
+		this.persistedTerminals.forEach(cliServer => {
+			cliServer.dispose();
+		});
+
+		this.persistedTerminals.clear();
 	}
 }
