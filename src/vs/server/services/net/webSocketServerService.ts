@@ -159,6 +159,8 @@ export class WebSocketServerService extends AbstractIncomingRequestService<Upgra
 				};
 
 				connection = new ExtensionHostConnection(protocol, this.logService, startParams, this.environmentService);
+				await connection.start();
+
 				break;
 			case ConnectionType.Tunnel:
 				return protocol.tunnel();
