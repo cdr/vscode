@@ -15,7 +15,7 @@ import { Schemas } from 'vs/base/common/network';
 import { isAbsolute, join } from 'vs/base/common/path';
 import { cwd } from 'vs/base/common/process';
 import { URI } from 'vs/base/common/uri';
-import { enableCustomMarketplace } from 'vs/base/node/marketplace';
+import { monkeyPatchVSZip } from 'vs/base/node/marketplace';
 import { Promises } from 'vs/base/node/pfs';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ConfigurationService } from 'vs/platform/configuration/common/configurationService';
@@ -59,7 +59,7 @@ class CliMain extends Disposable {
 		gracefulify(fs);
 
 		/** @coder */
-		enableCustomMarketplace(product);
+		monkeyPatchVSZip(product);
 
 		this.registerListeners();
 	}

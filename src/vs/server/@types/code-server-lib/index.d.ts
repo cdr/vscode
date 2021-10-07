@@ -19,7 +19,7 @@ declare global {
 			authed: boolean;
 			disableUpdateCheck: boolean;
 			startPath?: StartPath;
-			codeServerVersion: string;
+			codeServerVersion?: string;
 			serverUrl: URL;
 		}
 
@@ -29,13 +29,6 @@ declare global {
 
 		export type CreateVSServer = (serverConfiguration: ServerConfiguration) => Promise<Server>;
 
-		/**
-		 * Base options included on every page.
-		 */
-		export interface ClientConfiguration extends Pick<ServerConfiguration, 'codeServerVersion'> {
-			base: string;
-			csStaticBase: string;
-		}
 
 		/**
 		 * @deprecated This should be removed when code-server merges with lib/vscode
@@ -72,4 +65,4 @@ declare global {
 	}
 }
 
-export {};
+export { };

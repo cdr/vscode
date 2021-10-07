@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { enableCustomMarketplace } from 'vs/base/node/marketplace';
-import product from 'vs/platform/product/common/product';
 import { ArgumentParser } from '../platform/environment/node/argumentParser';
 import { ServerProcessMain } from './main';
 
@@ -35,7 +33,6 @@ export const main = async () => {
 		args,
 		authed: false,
 		disableUpdateCheck: true,
-		codeServerVersion: 'Unknown',
 		serverUrl,
 	});
 
@@ -51,8 +48,6 @@ export const main = async () => {
  * It should eventually be phased out and folded into VS Code's existing CLI flow.
  */
 export const createVSServer: CodeServerLib.CreateVSServer = async serverConfig => {
-	enableCustomMarketplace(product);
-
 	const codeServer = new ServerProcessMain(serverConfig);
 
 	return codeServer.startup({ listenWhenReady: false });

@@ -76,4 +76,39 @@ else {
 	}
 }
 
+/**
+ * Override original functionality so we can use a custom marketplace with
+ * either tars or zips.
+ * @deprecated This should be phased out as we move toward Open VSX.
+ */
+function parseExtensionsGallery(product: IProductConfiguration) {
+	if (typeof env['EXTENSIONS_GALLERY'] === 'undefined') {
+		return;
+	}
+
+	let extensionsGallery: NonNullable<IProductConfiguration['extensionsGallery']>;
+
+	try {
+		extensionsGallery = {
+			serviceUrl: '',
+			itemUrl: '',
+			resourceUrlTemplate: '',
+			controlUrl: '',
+			recommendationsUrl: '',
+			...JSON.parse(env['EXTENSIONS_GALLERY'])
+		};
+	} catch (error) {
+		console.error(error);
+		return;
+	}
+
+	console.log(`Custom marketplace enabled.`);
+	console.log(JSON.stringify(extensionsGallery, null, 2));
+
+	// Workaround for readonly property.
+	Object.assign(product, { extensionsGallery });
+}
+
+parseExtensionsGallery(product);
+
 export default product;

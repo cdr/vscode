@@ -11,7 +11,6 @@ import { isAbsolute, join } from 'vs/base/common/path';
 import { IProcessEnvironment, isWindows } from 'vs/base/common/platform';
 import { randomPort } from 'vs/base/common/ports';
 import { isString } from 'vs/base/common/types';
-import { enableCustomMarketplace } from 'vs/base/node/marketplace';
 import { whenDeleted, writeFileSync } from 'vs/base/node/pfs';
 import { findFreePort } from 'vs/base/node/ports';
 import { NativeParsedArgs } from 'vs/platform/environment/common/argv';
@@ -35,9 +34,6 @@ interface IMainCli {
 }
 
 export async function main(argv: string[]): Promise<any> {
-	/** @coder */
-	enableCustomMarketplace(product);
-
 	let args: NativeParsedArgs;
 
 	try {

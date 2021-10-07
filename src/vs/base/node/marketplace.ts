@@ -158,19 +158,13 @@ const extractTar = async (tarPath: string, targetPath: string, options: vszip.IE
 /**
  * Override original functionality so we can use a custom marketplace with
  * either tars or zips.
+ * @deprecated This should be phased out as we move toward Open VSX.
  */
-export const enableCustomMarketplace = (product: IProductConfiguration): void => {
-	const extensionsGallery: IProductConfiguration['extensionsGallery'] = {
-		serviceUrl: process.env.SERVICE_URL || 'https://extensions.coder.com/api',
-		resourceUrlTemplate: '',
-		itemUrl: process.env.ITEM_URL || '',
-		controlUrl: '',
-		recommendationsUrl: '',
-		...(product.extensionsGallery || {}),
-	};
-
-	// Workaround for readonly property.
-	Object.assign(product, { extensionsGallery });
+export const monkeyPatchVSZip = (product: IProductConfiguration): void => {
+	if (product.extensionsGallery?.serviceUrl !== 'https://extensions.coder.com/api') {
+		return;
+	}
+	console.log('Patching VS Zip...');
 
 	const target = vszip as typeof vszip;
 
