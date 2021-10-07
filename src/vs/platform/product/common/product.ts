@@ -58,7 +58,7 @@ else {
 			nameShort: 'Code Server - Dev',
 			nameLong: 'Code Server - Dev',
 			applicationName: 'code-server',
-			dataFolderName: '.vscode-oss',
+			dataFolderName: '.code-server',
 			urlProtocol: 'code-oss',
 			reportIssueUrl: 'https://github.com/cdr/code-server/issues/new',
 			licenseName: 'MIT',

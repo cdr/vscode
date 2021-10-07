@@ -79,9 +79,11 @@ export class WebSocketServerService extends AbstractIncomingRequestService<Upgra
 			throw error;
 		}
 
-		socket.on('error', e => {
-			this.logService.error(`[${connectionOptions.reconnectionToken}] Socket failed for "${req.url}".`, e);
-		});
+		const handleSocketError = (error: Error) => {
+			this.logService.error(`[${connectionOptions.reconnectionToken}] Socket failed for "${req.url}".`, error);
+		};
+
+		socket.on('error', handleSocketError);
 
 		const { responseHeaders, permessageDeflate } = createReponseHeaders(req.headers);
 		socket.write(responseHeaders);
@@ -93,6 +95,8 @@ export class WebSocketServerService extends AbstractIncomingRequestService<Upgra
 		} catch (error: any) {
 			protocol.dispose(error.message);
 		}
+
+		socket.off('error', handleSocketError);
 	};
 
 	private async connect(protocol: ServerProtocol): Promise<void> {

@@ -42,6 +42,7 @@ const extPointName = colorThemesExtPoint.name;
  * @remark This is not yet as robust as `WorkbenchThemeService`
  */
 export class ServerThemeService implements IServerThemeService {
+	private logPrefix = '[Theme Service]';
 	private themeConfiguration = new ThemeConfiguration(this.configurationService);
 
 	constructor(
@@ -54,12 +55,14 @@ export class ServerThemeService implements IServerThemeService {
 	async initialize() {
 		const availableExtensions = await this.extensionScannerService.scanExtensions();
 
+		this.logService.debug(this.logPrefix, 'Scanning for theme extension...');
+
 		const users: IExtensionPointUser<IThemeExtensionPoint[]>[] = availableExtensions
 			.filter(desc => {
 				return desc.contributes && Object.hasOwnProperty.call(desc.contributes, extPointName);
 			})
 			.map(desc => {
-				this.logService.debug('Theme extension found', desc.name);
+				this.logService.debug(this.logPrefix, desc.name);
 
 				return {
 					description: desc,

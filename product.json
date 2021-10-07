@@ -2,7 +2,7 @@
 	"nameShort": "Code Server",
 	"nameLong": "Code Server",
 	"applicationName": "code-server",
-	"dataFolderName": ".vscode-oss",
+	"dataFolderName": ".code-server",
 	"win32MutexName": "codeserver",
 	"licenseName": "MIT",
 	"licenseUrl": "https://github.com/cdr/code-server/blob/main/LICENSE.txt",

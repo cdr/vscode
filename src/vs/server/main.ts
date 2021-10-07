@@ -102,6 +102,7 @@ interface ServicesResult {
  * Handles client connections to a editor instance via IPC.
  */
 export class ServerProcessMain extends Disposable implements IServerProcessMain {
+	private logPrefix = '[Code Server]';
 	netServer = createNetServer();
 
 	constructor(private readonly configuration: CodeServerLib.ServerConfiguration) {
@@ -145,7 +146,7 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 			const { serverUrl } = this.configuration;
 
 			await listen(this.netServer, parseInt(serverUrl.port, 10), serverUrl.hostname);
-			logService.info('Code Server active and listening at:', serverUrl.toString());
+			logService.info(this.logPrefix, 'Active and listening at:', serverUrl.toString());
 		}
 
 		return this.netServer;
@@ -187,6 +188,11 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 		const logService = new MultiplexLogService([new ConsoleMainLogger(getLogLevel(environmentServerService)), bufferLogService]);
 		process.once('exit', () => logService.dispose());
 		services.set(ILogService, logService);
+
+		logService.debug(this.logPrefix, 'Using the following paths:');
+		for (const [label, path] of environmentServerService.environmentPathsLabels.entries()) {
+			logService.debug(this.logPrefix, `${label}: ${path}`);
+		}
 
 		// Files
 		const fileService = new FileService(logService);
@@ -326,7 +332,7 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 			instantiationService,
 			// Delay creation of spdlog for perf reasons (https://github.com/microsoft/vscode/issues/72906)
 			initializeSpdLogger: () => {
-				logService.debug('Initializing Spd logger...');
+				logService.debug(this.logPrefix, 'Initializing Spd logger...');
 				bufferLogService.logger = new SpdLogLogger(
 					'main',
 					environmentServerService.remoteExtensionLogsPath,

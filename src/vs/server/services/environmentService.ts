@@ -238,6 +238,19 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 	}
 
 	@memoize
+	public get environmentPathsLabels(): Map<string, string> {
+		return new Map([
+			['Logs', this.logsPath],
+			['User Data', this.userDataPath],
+			['Global Storage', this.globalStorageHome.fsPath],
+			['Workspace Storage', this.workspaceStorageHome.fsPath],
+			['Builtin Extensions', this.builtinExtensionsPath],
+			['Extensions', this.extensionsPath],
+			['App Settings', this.appSettingsHome.toString()],
+		]);
+	}
+
+	@memoize
 	public get environmentPaths(): string[] {
 		return [this.extensionsPath, this.logsPath, this.globalStorageHome.fsPath, this.workspaceStorageHome.fsPath, ...this.extraExtensionPaths, ...this.extraBuiltinExtensionPaths];
 	}
