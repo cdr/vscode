@@ -44,6 +44,7 @@ const vscodeResources = [
 	'out-build/vs/**/*.{svg,png,html,ttf,jpg}',
 	'out-build/vs/**/markdown.css',
 	'out-build/vs/workbench/contrib/tasks/**/*.json',
+	'out-build/vs/webPackagePaths.js',
 	'!**/test/**'
 ];
 
