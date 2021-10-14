@@ -83,6 +83,7 @@ import { REMOTE_FILE_SYSTEM_CHANNEL_NAME } from 'vs/workbench/services/remote/co
 import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 import { UriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentityService';
 import { monkeyPatchVSZip } from 'vs/base/node/marketplace';
+import { ILocalAuthenticationService, LocalAuthenticationService } from 'vs/platform/authentication/node/authenticationService';
 
 interface IServerProcessMainStartupOptions {
 	listenWhenReady?: boolean;
@@ -271,6 +272,10 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 
 		// Localization
 		services.set(ILocalizationsService, new SyncDescriptor(LocalizationsService));
+
+		// Authentication
+		const serverAuthenticatorService = new LocalAuthenticationService(configurationService, logService);
+		services.set(ILocalAuthenticationService, serverAuthenticatorService);
 
 		// Web
 		const webSocketServerService = new WebSocketServerService(

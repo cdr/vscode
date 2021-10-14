@@ -57,6 +57,8 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'extra-builtin-extensions-dir': { type: 'string[]', cat: 'o', description: localize('extra-builtin-extensions-dir', 'Path to an extra builtin extension directory.') },
 	'ignore-last-opened': { type: 'boolean', cat: 'o', description: localize('ignore-last-opened', "Ignore last opened.") },
 	'server': { type: 'string', cat: 'o', description: localize('server', "Run a remote server e.g. http://localhost:8080") },
+	'auth': { type: 'string', cat: 'o', args: 'authType', description: localize('auth', "Server authentication type. Default is 'password'. Allowed values are 'password', 'off'.") },
+	'save-auth-password': { type: 'string', cat: 'o', args: 'authPassword', description: localize('save-auth-password', "Saves an authentication password as a hashed value. If no password is given, a randomly generated string will be assigned.") },
 	// @coder: END
 	'list-extensions': { type: 'boolean', cat: 'e', description: localize('listExtensions', "List the installed extensions.") },
 	'show-versions': { type: 'boolean', cat: 'e', description: localize('showVersions', "Show versions of installed extensions, when using --list-extensions.") },

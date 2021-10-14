@@ -14,6 +14,7 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { Schemas } from 'vs/base/common/network';
 import { isAbsolute, join } from 'vs/base/common/path';
 import { cwd } from 'vs/base/common/process';
+import { isFalsyOrWhitespace } from 'vs/base/common/strings';
 import { URI } from 'vs/base/common/uri';
 import { monkeyPatchVSZip } from 'vs/base/node/marketplace';
 import { Promises } from 'vs/base/node/pfs';
@@ -47,6 +48,7 @@ import { ITelemetryServiceConfig, TelemetryService } from 'vs/platform/telemetry
 import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
 import { buildTelemetryMessage } from 'vs/platform/telemetry/node/telemetry';
+import { ILocalAuthenticationService, LocalAuthenticationService } from 'vs/platform/authentication/node/authenticationService';
 
 class CliMain extends Disposable {
 
@@ -80,6 +82,7 @@ class CliMain extends Disposable {
 			const fileService = accessor.get(IFileService);
 			const environmentService = accessor.get(INativeEnvironmentService);
 			const extensionManagementCLIService = accessor.get(IExtensionManagementCLIService);
+			const authenticationService = accessor.get(ILocalAuthenticationService);
 
 			// Log info
 			logService.info('CLI main', this.argv);
@@ -88,7 +91,7 @@ class CliMain extends Disposable {
 			this.registerErrorHandler(logService);
 
 			// Run based on argv
-			await this.doRun(environmentService, extensionManagementCLIService, fileService);
+			await this.doRun(environmentService, extensionManagementCLIService, fileService, logService, authenticationService);
 
 			// Flush the remaining data in AI adapter (with 1s timeout)
 			return raceTimeout(combinedAppender(...appenders).flush(), 1000);
@@ -136,6 +139,9 @@ class CliMain extends Disposable {
 
 		// Request
 		services.set(IRequestService, new SyncDescriptor(RequestService));
+
+		// Authentication
+		services.set(ILocalAuthenticationService, new SyncDescriptor(LocalAuthenticationService));
 
 		// Extensions
 		services.set(IExtensionManagementService, new SyncDescriptor(ExtensionManagementService));
@@ -199,7 +205,12 @@ class CliMain extends Disposable {
 		process.on('unhandledRejection', (reason: unknown) => onUnexpectedError(reason));
 	}
 
-	private async doRun(environmentService: INativeEnvironmentService, extensionManagementCLIService: IExtensionManagementCLIService, fileService: IFileService): Promise<void> {
+	private async doRun(environmentService: INativeEnvironmentService, extensionManagementCLIService: IExtensionManagementCLIService, fileService: IFileService, logService: ILogService, authenticationService: ILocalAuthenticationService): Promise<void> {
+
+		// Save auth password
+		if (this.argv['save-auth-password']) {
+			return this.saveAuthPassword(environmentService, logService, authenticationService, this.argv['save-auth-password']);
+		}
 
 		// Install Source
 		if (this.argv['install-source']) {
@@ -238,6 +249,27 @@ class CliMain extends Disposable {
 
 	private async setInstallSource(environmentService: INativeEnvironmentService, fileService: IFileService, installSource: string): Promise<void> {
 		await fileService.writeFile(URI.file(environmentService.installSourcePath), VSBuffer.fromString(installSource.slice(0, 30)));
+	}
+
+	private async saveAuthPassword(environmentService: INativeEnvironmentService, logService: ILogService, authenticationService: ILocalAuthenticationService, unhashedPassword?: string): Promise<void> {
+		if (isFalsyOrWhitespace(unhashedPassword)) {
+			logService.info(`No password given. creating one...`);
+			unhashedPassword = authenticationService.createRandomPassword();
+
+			logService.info('*'.repeat(80));
+			logService.info('/!\\ CODE-SERVER PASSWORD /!\\');
+			logService.info('');
+			logService.info(unhashedPassword);
+			logService.info('');
+			logService.info('/!\\ If you lose this, you will need to generate a new password. /!\\');
+			logService.info('*'.repeat(80));
+		}
+
+		const { hashedPassword } = await authenticationService.hashPassword(unhashedPassword!);
+
+		await authenticationService.saveHashedPassword(hashedPassword);
+
+		logService.info(`Hashed password was saved to user configuration ${environmentService.settingsResource.toString()}`);
 	}
 }
 

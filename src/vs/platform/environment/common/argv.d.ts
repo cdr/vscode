@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AuthType } from 'vs/platform/authentication/common/authentication';
+
 /**
  * A list of command line arguments we support natively.
  */
@@ -44,6 +46,8 @@ export interface NativeParsedArgs {
 	'extra-extensions-dir'?: string[];
 	'extra-builtin-extensions-dir'?: string[];
 	'ignore-last-opened'?: boolean;
+	auth?: AuthType;
+	'save-auth-password'?: string;
 	server?: string;
 	// @coder: END
 	extensionDevelopmentPath?: string[]; // undefined or array of 1 or more local paths or URIs
