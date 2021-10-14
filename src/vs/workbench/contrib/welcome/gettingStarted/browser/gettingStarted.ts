@@ -17,7 +17,7 @@ import { IThemeService, registerThemingParticipant, ThemeIcon } from 'vs/platfor
 import { welcomePageBackground, welcomePageProgressBackground, welcomePageProgressForeground, welcomePageTileBackground, welcomePageTileHoverBackground, welcomePageTileShadow } from 'vs/workbench/contrib/welcome/gettingStarted/browser/gettingStartedColors';
 import { activeContrastBorder, buttonBackground, buttonForeground, buttonHoverBackground, contrastBorder, descriptionForeground, focusBorder, foreground, textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { firstSessionDateStorageKey, ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { firstSessionDateStorageKey, ITelemetryService, TelemetryLevel } from 'vs/platform/telemetry/common/telemetry';
 import { DomScrollableElement } from 'vs/base/browser/ui/scrollbar/scrollableElement';
 import { gettingStartedCheckedCodicon, gettingStartedUncheckedCodicon } from 'vs/workbench/contrib/welcome/gettingStarted/browser/gettingStartedIcons';
 import { IOpenerService, matchesScheme } from 'vs/platform/opener/common/opener';
@@ -45,7 +45,7 @@ import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { Link } from 'vs/platform/opener/browser/link';
 import { renderFormattedText } from 'vs/base/browser/formattedTextRenderer';
 import { IWebviewService } from 'vs/workbench/contrib/webview/browser/webview';
-import { DEFAULT_MARKDOWN_STYLES, renderMarkdownDocument } from 'vs/workbench/contrib/markdown/common/markdownDocumentRenderer';
+import { DEFAULT_MARKDOWN_STYLES, renderMarkdownDocument } from 'vs/workbench/contrib/markdown/browser/markdownDocumentRenderer';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
 import { generateUuid } from 'vs/base/common/uuid';
@@ -67,6 +67,7 @@ import { GettingStartedIndexList } from './gettingStartedList';
 import product from 'vs/platform/product/common/product';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
+import { getTelemetryLevel } from 'vs/platform/telemetry/common/telemetryUtils';
 
 const SLIDE_TRANSITION_TIME_MS = 250;
 const configurationKey = 'workbench.startupEditor';
@@ -285,9 +286,11 @@ export class GettingStartedPage extends EditorPane {
 	}
 
 	async makeCategoryVisibleWhenAvailable(categoryID: string, stepId?: string) {
-		await this.gettingStartedService.installedExtensionsRegistered;
+		if (!this.gettingStartedCategories.some(c => c.id === categoryID)) {
+			await this.gettingStartedService.installedExtensionsRegistered;
+			this.gettingStartedCategories = this.gettingStartedService.getWalkthroughs();
+		}
 
-		this.gettingStartedCategories = this.gettingStartedService.getWalkthroughs();
 		const ourCategory = this.gettingStartedCategories.find(c => c.id === categoryID);
 		if (!ourCategory) {
 			throw Error('Could not find category with ID: ' + categoryID);
@@ -464,7 +467,10 @@ export class GettingStartedPage extends EditorPane {
 					const generalizedLocale = locale?.replace(/-.*$/, '');
 					const generalizedLocalizedPath = path.with({ path: path.path.replace(/\.md$/, `.nls.${generalizedLocale}.md`) });
 
-					const fileExists = (file: URI) => this.fileService.resolve(file).then(() => true).catch(() => false);
+					const fileExists = (file: URI) => this.fileService
+						.resolve(file, { resolveMetadata: true })
+						.then((stat) => !!stat.size) // Double check the file actually has content for fileSystemProviders that fake `stat`. #131809
+						.catch(() => false);
 
 					const [localizedFileExists, generalizedLocalizedFileExists] = await Promise.all([
 						fileExists(localizedPath),
@@ -634,9 +640,9 @@ export class GettingStartedPage extends EditorPane {
 
 				webview.onMessage(e => {
 					const message: string = e.message as string;
-					if (message.startsWith('command:')) {
-						this.openerService.open(message, { allowCommands: true });
-					} else if (message.startsWith('setTheme:')) {
+					if (message.startsWith('command$')) {
+						this.openerService.open(message.replace('$', ':'), { allowCommands: true });
+					} else if (message.startsWith('setTheme$')) {
 						this.configurationService.updateValue(ThemeSettings.COLOR_THEME, message.slice('setTheme:'.length), ConfigurationTarget.USER);
 					} else {
 						console.error('Unexpected message', message);
@@ -793,9 +799,9 @@ export class GettingStartedPage extends EditorPane {
 			</body>
 			<script nonce="${nonce}">
 				const vscode = acquireVsCodeApi();
-				document.querySelectorAll('[on-checked]').forEach(el => {
+				document.querySelectorAll('[when-checked]').forEach(el => {
 					el.addEventListener('click', () => {
-						vscode.postMessage(el.getAttribute('on-checked'));
+						vscode.postMessage(el.getAttribute('when-checked'));
 					});
 				});
 
@@ -820,7 +826,7 @@ export class GettingStartedPage extends EditorPane {
 
 		this.categoriesSlide = $('.gettingStartedSlideCategories.gettingStartedSlide');
 
-		const prevButton = $('button.prev-button.button-link', { 'x-dispatch': 'scrollPrev' }, $('span.scroll-button.codicon.codicon-chevron-left'), $('span.moreText', {}, localize('welcome', "Welcome")));
+		const prevButton = $('button.prev-button.button-link', { 'x-dispatch': 'scrollPrev' }, $('span.scroll-button.codicon.codicon-chevron-left'), $('span.moreText', {}, localize('getStarted', "Get Started")));
 		this.stepsSlide = $('.gettingStartedSlideDetails.gettingStartedSlide', {}, prevButton);
 
 		this.stepsContent = $('.gettingStartedDetailsContent', {});
@@ -1003,7 +1009,9 @@ export class GettingStartedPage extends EditorPane {
 				.filter(recent => !this.workspaceContextService.isCurrentWorkspace(isRecentWorkspace(recent) ? recent.workspace : recent.folderUri))
 				.map(recent => ({ ...recent, id: isRecentWorkspace(recent) ? recent.workspace.id : recent.folderUri.toString() }));
 
-			const updateEntries = () => { recentlyOpenedList.setEntries(workspacesWithID); };
+			const updateEntries = () => {
+				recentlyOpenedList.setEntries(workspacesWithID);
+			};
 
 			updateEntries();
 
@@ -1102,7 +1110,6 @@ export class GettingStartedPage extends EditorPane {
 				title: localize('walkthroughs', "Walkthroughs"),
 				klass: 'getting-started',
 				limit: 5,
-				empty: undefined, more: undefined,
 				footer: $('span.button-link.see-all-walkthroughs', { 'x-dispatch': 'seeAllWalkthroughs' }, localize('showAll', "More...")),
 				renderElement: renderGetttingStaredWalkthrough,
 				rankElement: rankWalkthrough,
@@ -1158,13 +1165,13 @@ export class GettingStartedPage extends EditorPane {
 			bar.style.width = `${progress}%`;
 
 
-			(element.parentElement as HTMLElement).classList[stats.stepsComplete === 0 ? 'add' : 'remove']('no-progress');
+			(element.parentElement as HTMLElement).classList.toggle('no-progress', stats.stepsComplete === 0);
 
 			if (stats.stepsTotal === stats.stepsComplete) {
 				bar.title = localize('gettingStarted.allStepsComplete', "All {0} steps complete!", stats.stepsComplete);
 			}
 			else {
-				bar.title = localize('gettingStarted.someStepsComplete', "{0} of {1} steps complete", stats.stepsTotal, stats.stepsComplete);
+				bar.title = localize('gettingStarted.someStepsComplete', "{0} of {1} steps complete", stats.stepsComplete, stats.stepsTotal);
 			}
 		});
 	}
@@ -1186,6 +1193,46 @@ export class GettingStartedPage extends EditorPane {
 		return widget;
 	}
 
+	private runStepCommand(href: string) {
+
+		const isCommand = href.startsWith('command:');
+		const toSide = href.startsWith('command:toSide:');
+		const command = href.replace(/command:(toSide:)?/, 'command:');
+
+		this.telemetryService.publicLog2<GettingStartedActionEvent, GettingStartedActionClassification>('gettingStarted.ActionExecuted', { command: 'runStepAction', argument: href });
+
+		const fullSize = this.groupsService.contentDimension;
+
+		if (toSide && fullSize.width > 700) {
+			if (this.groupsService.count === 1) {
+				this.groupsService.addGroup(this.groupsService.groups[0], GroupDirection.LEFT, { activate: true });
+
+				let gettingStartedSize: number;
+				if (fullSize.width > 1600) {
+					gettingStartedSize = 800;
+				} else if (fullSize.width > 800) {
+					gettingStartedSize = 400;
+				} else {
+					gettingStartedSize = 350;
+				}
+
+				const gettingStartedGroup = this.groupsService.getGroups(GroupsOrder.MOST_RECENTLY_ACTIVE).find(group => (group.activeEditor instanceof GettingStartedInput));
+				this.groupsService.setSize(assertIsDefined(gettingStartedGroup), { width: gettingStartedSize, height: fullSize.height });
+			}
+
+			const nonGettingStartedGroup = this.groupsService.getGroups(GroupsOrder.MOST_RECENTLY_ACTIVE).find(group => !(group.activeEditor instanceof GettingStartedInput));
+			if (nonGettingStartedGroup) {
+				this.groupsService.activateGroup(nonGettingStartedGroup);
+				nonGettingStartedGroup.focus();
+			}
+		}
+		this.openerService.open(command, { allowCommands: true });
+
+		if (!isCommand && (href.startsWith('https://') || href.startsWith('http://'))) {
+			this.gettingStartedService.progressByEvent('onLink:' + href);
+		}
+	}
+
 	private buildStepMarkdownDescription(container: HTMLElement, text: LinkedText[]) {
 		while (container.firstChild) { container.removeChild(container.firstChild); }
 
@@ -1196,47 +1243,13 @@ export class GettingStartedPage extends EditorPane {
 				const button = new Button(buttonContainer, { title: node.title, supportIcons: true });
 
 				const isCommand = node.href.startsWith('command:');
-				const toSide = node.href.startsWith('command:toSide:');
 				const command = node.href.replace(/command:(toSide:)?/, 'command:');
 
 				button.label = node.label;
-				button.onDidClick(async e => {
+				button.onDidClick(e => {
 					e.stopPropagation();
 					e.preventDefault();
-
-					this.telemetryService.publicLog2<GettingStartedActionEvent, GettingStartedActionClassification>('gettingStarted.ActionExecuted', { command: 'runStepAction', argument: node.href });
-
-					const fullSize = this.groupsService.contentDimension;
-
-					if (toSide && fullSize.width > 700) {
-						if (this.groupsService.count === 1) {
-							this.groupsService.addGroup(this.groupsService.groups[0], GroupDirection.LEFT, { activate: true });
-
-							let gettingStartedSize: number;
-							if (fullSize.width > 1600) {
-								gettingStartedSize = 800;
-							} else if (fullSize.width > 800) {
-								gettingStartedSize = 400;
-							} else {
-								gettingStartedSize = 350;
-							}
-
-							const gettingStartedGroup = this.groupsService.getGroups(GroupsOrder.MOST_RECENTLY_ACTIVE).find(group => (group.activeEditor instanceof GettingStartedInput));
-							this.groupsService.setSize(assertIsDefined(gettingStartedGroup), { width: gettingStartedSize, height: fullSize.height });
-						}
-
-						const nonGettingStartedGroup = this.groupsService.getGroups(GroupsOrder.MOST_RECENTLY_ACTIVE).find(group => !(group.activeEditor instanceof GettingStartedInput));
-						if (nonGettingStartedGroup) {
-							this.groupsService.activateGroup(nonGettingStartedGroup);
-							nonGettingStartedGroup.focus();
-						}
-					}
-					this.openerService.open(command, { allowCommands: true });
-
-					if (!isCommand && (node.href.startsWith('https://') || node.href.startsWith('http://'))) {
-						this.gettingStartedService.progressByEvent('onLink:' + node.href);
-					}
-
+					this.runStepCommand(node.href);
 				}, null, this.detailsPageDisposables);
 
 				if (isCommand) {
@@ -1254,9 +1267,7 @@ export class GettingStartedPage extends EditorPane {
 					if (typeof node === 'string') {
 						append(p, renderFormattedText(node, { inline: true, renderCodeSegments: true }));
 					} else {
-						const link = this.instantiationService.createInstance(Link, node, {});
-
-						append(p, link.el);
+						const link = this.instantiationService.createInstance(Link, p, node, { opener: (href) => this.runStepCommand(href) });
 						this.detailsPageDisposables.add(link);
 					}
 				}
@@ -1387,7 +1398,7 @@ export class GettingStartedPage extends EditorPane {
 		const stepListComponent = this.detailsScrollbar.getDomNode();
 
 		const categoryFooter = $('.getting-started-footer');
-		if (this.editorInput.showTelemetryNotice && this.configurationService.getValue('telemetry.enableTelemetry') && product.enableTelemetry) {
+		if (this.editorInput.showTelemetryNotice && getTelemetryLevel(this.configurationService) !== TelemetryLevel.NONE && product.enableTelemetry) {
 			const mdRenderer = this._register(this.instantiationService.createInstance(MarkdownRenderer, {}));
 
 			const privacyStatementCopy = localize('privacy statement', "privacy statement");

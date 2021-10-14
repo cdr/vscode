@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createHash } from 'crypto';
+import { promises as fs } from 'fs';
 import { createConnection, createServer, Server as NetServer, Socket } from 'net';
 import { tmpdir } from 'os';
 import { VSBuffer } from 'vs/base/common/buffer';
@@ -181,6 +182,8 @@ export class WebSocketNodeSocket extends Disposable implements ISocket {
 		state: ReadState.PeekHeader,
 		readLen: Constants.MinHeaderByteSize,
 		fin: 0,
+		compressed: false,
+		firstFrameOfMessage: true,
 		mask: 0
 	};
 
@@ -396,6 +399,7 @@ export class WebSocketNodeSocket extends Disposable implements ISocket {
 				const peekHeader = this._incomingData.peek(this._state.readLen);
 				const firstByte = peekHeader.readUInt8(0);
 				const finBit = (firstByte & 0b10000000) >>> 7;
+				const rsv1Bit = (firstByte & 0b01000000) >>> 6;
 				const secondByte = peekHeader.readUInt8(1);
 				const hasMask = (secondByte & 0b10000000) >>> 7;
 				const len = (secondByte & 0b01111111);
@@ -403,6 +407,11 @@ export class WebSocketNodeSocket extends Disposable implements ISocket {
 				this._state.state = ReadState.ReadHeader;
 				this._state.readLen = Constants.MinHeaderByteSize + (hasMask ? 4 : 0) + (len === 126 ? 2 : 0) + (len === 127 ? 8 : 0);
 				this._state.fin = finBit;
+				if (this._state.firstFrameOfMessage) {
+					// if the frame is compressed, the RSV1 bit is set only for the first frame of the message
+					this._state.compressed = Boolean(rsv1Bit);
+				}
+				this._state.firstFrameOfMessage = Boolean(finBit);
 				this._state.mask = 0;
 
 			} else if (this._state.state === ReadState.ReadHeader) {
@@ -455,7 +464,12 @@ export class WebSocketNodeSocket extends Disposable implements ISocket {
 				this._state.readLen = Constants.MinHeaderByteSize;
 				this._state.mask = 0;
 
-				if (this._zlibInflate) {
+				if (this._zlibInflate && this._state.compressed) {
+					// See https://datatracker.ietf.org/doc/html/rfc7692#section-9.2
+					// Even if permessageDeflate is negotiated, it is possible
+					// that the other side might decide to send uncompressed messages
+					// So only decompress messages that have the RSV 1 bit set
+					//
 					// See https://tools.ietf.org/html/rfc7692#section-7.2.2
 					if (this._recordInflateBytes) {
 						this._recordedInflateBytes.push(Buffer.from(<Buffer>body.buffer));
@@ -630,5 +644,47 @@ export function connect(hook: any, clientId: string): Promise<Client> {
 		});
 
 		socket.once('error', e);
+	});
+}
+
+
+export interface ListenHandleSocket {
+	socket: string;
+}
+
+export interface ListenHandleHost {
+	port: number;
+	hostname: string;
+}
+
+export type ListenHandle = ListenHandleSocket | ListenHandleHost;
+
+const isSocketHandle = (listenHandle: ListenHandle): listenHandle is ListenHandleSocket => {
+	return listenHandle.hasOwnProperty('socket');
+};
+
+/**
+ * Utility wrapper to aid in listening to a port
+ */
+export function listen(server: NetServer, listenHandle: ListenHandleSocket | ListenHandleHost): Promise<void> {
+	return new Promise<void>(async (resolve, reject) => {
+		server.on('error', reject);
+
+		const onListen = () => {
+			// Promise resolved earlier so this is an unrelated error.
+			server.off('error', reject);
+
+			resolve();
+		};
+
+
+		if (isSocketHandle(listenHandle)) {
+			await fs.unlink(listenHandle.socket);
+			server.listen(listenHandle.socket, onListen);
+		} else {
+			// [] is the correct format when using :: but Node errors with them.
+			server.listen(listenHandle.port, listenHandle.hostname.replace(/^\[|\]$/g, ''), onListen);
+		}
+
 	});
 }

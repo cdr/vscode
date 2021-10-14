@@ -128,6 +128,7 @@ export class TerminalProviderChannel implements IServerChannel<RemoteAgentConnec
 		const workspace = new Workspace(
 			terminalArgs.workspaceId,
 			terminalArgs.workspaceFolders.map((folderData) => toWorkspaceFolder(URI.revive(folderData.uri))),
+			false,
 			null,
 			uri => this.uriIdentityService.extUri.ignorePathCasing(uri));
 

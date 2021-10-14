@@ -9,11 +9,11 @@ import { IWorkbenchExtensionEnablementService, IWebExtensionsScannerService } fr
 import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IExtensionService, IExtensionHost, ExtensionHostKind, toExtensionDescription, ExtensionRunningLocation } from 'vs/workbench/services/extensions/common/extensions';
+import { IExtensionService, IExtensionHost, toExtensionDescription, ExtensionRunningLocation, extensionRunningLocationToString, ExtensionHostKind } from 'vs/workbench/services/extensions/common/extensions';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { IFileService } from 'vs/platform/files/common/files';
 import { IProductService } from 'vs/platform/product/common/productService';
-import { AbstractExtensionService, ExtensionRunningLocationClassifier, ExtensionRunningPreference } from 'vs/workbench/services/extensions/common/abstractExtensionService';
+import { AbstractExtensionService, ExtensionRunningPreference, extensionRunningPreferenceToString } from 'vs/workbench/services/extensions/common/abstractExtensionService';
 import { RemoteExtensionHost, IRemoteExtensionHostDataProvider, IRemoteExtensionHostInitData } from 'vs/workbench/services/extensions/common/remoteExtensionHost';
 import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
 import { WebWorkerExtensionHost } from 'vs/workbench/services/extensions/browser/webWorkerExtensionHost';
@@ -29,7 +29,8 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IExtensionManifestPropertiesService } from 'vs/workbench/services/extensions/common/extensionManifestPropertiesService';
 import { IUserDataInitializationService } from 'vs/workbench/services/userData/browser/userDataInit';
 import { IAutomatedWindow } from 'vs/platform/log/browser/log';
-import { IRemoteExplorerService } from '../../remote/common/remoteExplorerService';
+import { ILogService } from 'vs/platform/log/common/log';
+import { IRemoteExplorerService } from 'vs/workbench/services/remote/common/remoteExplorerService';
 
 export class ExtensionService extends AbstractExtensionService implements IExtensionService {
 
@@ -49,17 +50,14 @@ export class ExtensionService extends AbstractExtensionService implements IExten
 		@IConfigurationService configurationService: IConfigurationService,
 		@IRemoteAuthorityResolverService private readonly _remoteAuthorityResolverService: IRemoteAuthorityResolverService,
 		@IRemoteAgentService private readonly _remoteAgentService: IRemoteAgentService,
+		@IRemoteExplorerService private readonly _remoteExplorerService: IRemoteExplorerService,
 		@IWebExtensionsScannerService webExtensionsScannerService: IWebExtensionsScannerService,
 		@ILifecycleService private readonly _lifecycleService: ILifecycleService,
 		@IExtensionManifestPropertiesService extensionManifestPropertiesService: IExtensionManifestPropertiesService,
 		@IUserDataInitializationService private readonly _userDataInitializationService: IUserDataInitializationService,
-		@IRemoteExplorerService private readonly _remoteExplorerService: IRemoteExplorerService
+		@ILogService private readonly _logService: ILogService,
 	) {
 		super(
-			new ExtensionRunningLocationClassifier(
-				(extension) => this._getExtensionKind(extension),
-				(extensionKinds, isInstalledLocally, isInstalledRemotely, preference) => ExtensionService.pickRunningLocation(extensionKinds, isInstalledLocally, isInstalledRemotely, preference)
-			),
 			instantiationService,
 			notificationService,
 			environmentService,
@@ -79,34 +77,34 @@ export class ExtensionService extends AbstractExtensionService implements IExten
 		// Initialize installed extensions first and do it only after workbench is ready
 		this._lifecycleService.when(LifecyclePhase.Ready).then(async () => {
 			await this._userDataInitializationService.initializeInstalledExtensions(this._instantiationService);
-			this._initialize().then(async () => {
-				try {
-					// This enables the `vscode.workspace.registerRemoteAuthorityResolver` API to be executed.
-					// 
-					// It's specifically scoped to the "coder-link" scheme at the moment to reduce external
-					// dependency on forking VS Code functionality. 
-					// 
-					// The remote host doesn't resolve to an extension host like the API expects, but instead
-					// we only utilize the tunnel functionality.
-					const extHost = this._getExtensionHostManager(ExtensionHostKind.Remote);
-					const resolved = await extHost?.resolveAuthority('coder-link+web');
-					if (resolved) {
-						this._remoteExplorerService.setTunnelInformation(resolved.tunnelInformation);
-					}
-				} catch (error: any) {
-					let message = '';
+			await this._initialize();
 
-					if (error instanceof RemoteAuthorityResolverError && error._code === RemoteAuthorityResolverErrorCode.NoResolverFound) {
-						message = error.message;
-					}
-					
-					if (error instanceof Error) {
-						message = error.message;
-					}
-
-					this._logOrShowMessage(Severity.Ignore, nls.localize('link', "Failed to initialize remote Link authority: {0}", message || error));
+			try {
+				// This enables the `vscode.workspace.registerRemoteAuthorityResolver` API to be executed.
+				//
+				// It's specifically scoped to the "coder-link" scheme at the moment to reduce external
+				// dependency on forking VS Code functionality.
+				//
+				// The remote host doesn't resolve to an extension host like the API expects, but instead
+				// we only utilize the tunnel functionality.
+				const extHost = this._getExtensionHostManager(ExtensionHostKind.Remote);
+				const resolved = await extHost?.resolveAuthority('coder-link+web');
+				if (resolved) {
+					this._remoteExplorerService.setTunnelInformation(resolved.tunnelInformation);
 				}
-			});
+			} catch (error: any) {
+				let message = '';
+
+				if (error instanceof RemoteAuthorityResolverError && error._code === RemoteAuthorityResolverErrorCode.NoResolverFound) {
+					message = error.message;
+				}
+
+				if (error instanceof Error) {
+					message = error.message;
+				}
+
+				this._logOrShowMessage(Severity.Ignore, nls.localize('link', "Failed to initialize remote Link authority: {0}", message || error));
+			}
 		});
 
 		this._initFetchFileSystem();
@@ -157,6 +155,12 @@ export class ExtensionService extends AbstractExtensionService implements IExten
 				return this._remoteInitData!;
 			}
 		};
+	}
+
+	protected _pickRunningLocation(extensionId: ExtensionIdentifier, extensionKinds: ExtensionKind[], isInstalledLocally: boolean, isInstalledRemotely: boolean, preference: ExtensionRunningPreference): ExtensionRunningLocation {
+		const result = ExtensionService.pickRunningLocation(extensionKinds, isInstalledLocally, isInstalledRemotely, preference);
+		this._logService.trace(`pickRunningLocation for ${extensionId.value}, extension kinds: [${extensionKinds.join(', ')}], isInstalledLocally: ${isInstalledLocally}, isInstalledRemotely: ${isInstalledRemotely}, preference: ${extensionRunningPreferenceToString(preference)} => ${extensionRunningLocationToString(result)}`);
+		return result;
 	}
 
 	public static pickRunningLocation(extensionKinds: ExtensionKind[], isInstalledLocally: boolean, isInstalledRemotely: boolean, preference: ExtensionRunningPreference): ExtensionRunningLocation {

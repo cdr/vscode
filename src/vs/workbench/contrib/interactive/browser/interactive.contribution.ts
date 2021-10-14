@@ -21,12 +21,12 @@ import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiati
 import { Registry } from 'vs/platform/registry/common/platform';
 import { EditorPaneDescriptor, IEditorPaneRegistry } from 'vs/workbench/browser/editor';
 import { Extensions as WorkbenchExtensions, IWorkbenchContribution, IWorkbenchContributionsRegistry } from 'vs/workbench/common/contributions';
-import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { EditorExtensions, EditorsOrder, IEditorSerializer } from 'vs/workbench/common/editor';
+import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { columnToEditorGroup } from 'vs/workbench/services/editor/common/editorGroupColumn';
 import { InteractiveEditor } from 'vs/workbench/contrib/interactive/browser/interactiveEditor';
 import { InteractiveEditorInput } from 'vs/workbench/contrib/interactive/browser/interactiveEditorInput';
-import { NOTEBOOK_EDITOR_WIDGET_ACTION_WEIGHT } from 'vs/workbench/contrib/notebook/browser/contrib/coreActions';
+import { NOTEBOOK_EDITOR_WIDGET_ACTION_WEIGHT } from 'vs/workbench/contrib/notebook/browser/controller/coreActions';
 import { NotebookEditorWidget } from 'vs/workbench/contrib/notebook/browser/notebookEditorWidget';
 import { CellEditType, CellKind, ICellOutput } from 'vs/workbench/contrib/notebook/common/notebookCommon';
 import { INotebookContentProvider, INotebookService } from 'vs/workbench/contrib/notebook/common/notebookService';
@@ -185,7 +185,7 @@ export class InteractiveDocumentContribution extends Disposable implements IWork
 		editorResolverService.registerEditor(
 			`${Schemas.vscodeInteractiveInput}:/**`,
 			{
-				id: InteractiveEditor.ID,
+				id: InteractiveEditorInput.ID,
 				label: 'Interactive Editor',
 				priority: RegisteredEditorPriority.exclusive
 			},
@@ -202,7 +202,7 @@ export class InteractiveDocumentContribution extends Disposable implements IWork
 		editorResolverService.registerEditor(
 			`*.interactive`,
 			{
-				id: InteractiveEditor.ID,
+				id: InteractiveEditorInput.ID,
 				label: 'Interactive Editor',
 				priority: RegisteredEditorPriority.exclusive
 			},
@@ -250,7 +250,7 @@ export class InteractiveEditorSerializer implements IEditorSerializer {
 	}
 }
 
-// Registry.as<IEditorInputFactoryRegistry>(EditorExtensions.EditorInputFactories).registerEditorInputSerializer(
+// Registry.as<EditorInputFactoryRegistry>(EditorExtensions.EditorInputFactories).registerEditorInputSerializer(
 // 	InteractiveEditorInput.ID,
 // 	InteractiveEditorSerializer
 // );
@@ -436,7 +436,7 @@ registerAction2(class extends Action2 {
 
 				// reveal the cell into view first
 				editorControl.notebookEditor.revealCellRangeInView({ start: index, end: index + 1 });
-				await editorControl.notebookEditor.executeNotebookCells(editorControl.notebookEditor.viewModel!.getCells({ start: index, end: index + 1 }));
+				await editorControl.notebookEditor.executeNotebookCells(editorControl.notebookEditor.getCellsInRange({ start: index, end: index + 1 }));
 			}
 		}
 	}

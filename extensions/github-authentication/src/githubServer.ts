@@ -295,6 +295,9 @@ export class GitHubServer implements IGitHubServer {
 	}
 
 	public async sendAdditionalTelemetryInfo(token: string): Promise<void> {
+		if (!vscode.env.isTelemetryEnabled) {
+			return;
+		}
 		const nocors = await this.isNoCorsEnvironment();
 
 		if (nocors) {

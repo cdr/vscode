@@ -105,7 +105,7 @@ export const contentSecurityPolicies: Record<string, string> = {
 		'editorViewLayer',
 		'diffReview',
 		'extensionHostWorker',
-		'insane',
+		'dompurify',
 		'notebookRenderer',
 		'safeInnerHtml',
 		'standaloneColorizer',

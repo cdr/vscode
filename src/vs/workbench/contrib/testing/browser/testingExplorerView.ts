@@ -51,11 +51,12 @@ import { ByNameTestItemElement, HierarchicalByNameProjection } from 'vs/workbenc
 import { ITestTreeProjection, TestExplorerTreeElement, TestItemTreeElement, TestTreeErrorMessage } from 'vs/workbench/contrib/testing/browser/explorerProjections/index';
 import { getTestItemContextOverlay } from 'vs/workbench/contrib/testing/browser/explorerProjections/testItemContextOverlay';
 import * as icons from 'vs/workbench/contrib/testing/browser/icons';
-import { ITestExplorerFilterState, TestExplorerFilterState, TestFilterTerm, TestingExplorerFilter } from 'vs/workbench/contrib/testing/browser/testingExplorerFilter';
+import { TestingExplorerFilter } from 'vs/workbench/contrib/testing/browser/testingExplorerFilter';
 import { ITestingProgressUiService } from 'vs/workbench/contrib/testing/browser/testingProgressUiService';
 import { getTestingConfiguration, TestingConfigKeys } from 'vs/workbench/contrib/testing/common/configuration';
 import { labelForTestInState, TestExplorerViewMode, TestExplorerViewSorting, Testing, testStateNames } from 'vs/workbench/contrib/testing/common/constants';
 import { InternalTestItem, ITestRunProfile, TestItemExpandState, TestResultState, TestRunProfileBitset } from 'vs/workbench/contrib/testing/common/testCollection';
+import { ITestExplorerFilterState, TestExplorerFilterState, TestFilterTerm } from 'vs/workbench/contrib/testing/common/testExplorerFilterState';
 import { TestId } from 'vs/workbench/contrib/testing/common/testId';
 import { TestingContextKeys } from 'vs/workbench/contrib/testing/common/testingContextKeys';
 import { ITestingPeekOpener } from 'vs/workbench/contrib/testing/common/testingPeekOpener';
@@ -868,11 +869,13 @@ class TestsFilter implements ITreeFilter<TestExplorerTreeElement> {
 	}
 
 	private testTags(element: TestItemTreeElement): FilterResult {
-		if (!this.state.onlyTags.size) {
+		if (!this.state.includeTags.size && !this.state.excludeTags.size) {
 			return FilterResult.Include;
 		}
 
-		return element.test.item.tags.some(t => this.state.onlyTags.has(t))
+		return (this.state.includeTags.size ?
+			element.test.item.tags.some(t => this.state.includeTags.has(t)) :
+			true) && element.test.item.tags.every(t => !this.state.excludeTags.has(t))
 			? FilterResult.Include
 			: FilterResult.Inherit;
 	}
@@ -898,8 +901,11 @@ class TestsFilter implements ITreeFilter<TestExplorerTreeElement> {
 			return FilterResult.Include;
 		}
 
-		return hasNodeInOrParentOfUri(this.collection, this.documentUri, element.test.item.extId)
-			? FilterResult.Include : FilterResult.Exclude;
+		if (hasNodeInOrParentOfUri(this.collection, this.documentUri, element.test.item.extId)) {
+			return FilterResult.Include;
+		}
+
+		return FilterResult.Inherit;
 	}
 
 	private testFilterText(element: TestItemTreeElement) {

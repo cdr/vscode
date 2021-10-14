@@ -70,7 +70,12 @@ interface ITunnelOptions {
 
 	label?: string;
 
+	/**
+	 * @deprecated Use privacy instead
+	 */
 	public?: boolean;
+
+	privacy?: string;
 
 	protocol?: string;
 }
@@ -92,7 +97,12 @@ interface ITunnel {
 	 */
 	localAddress: string;
 
+	/**
+	 * @deprecated Use privacy instead
+	 */
 	public?: boolean;
+
+	privacy?: string;
 
 	/**
 	 * If protocol is not provided, it is assumed to be http, regardless of the localAddress
@@ -156,11 +166,12 @@ interface IWelcomeBanner {
 	message: string;
 
 	/**
-	 * Optional icon for the banner. This needs to be one of the existing
-	 * icons from our Codicon icon set. For example `code`. If not provided,
-	 * a default icon will be used.
+	 * Optional icon for the banner. This is either the URL to an icon to use
+	 * or the name of one of the existing icons from our Codicon icon set.
+	 *
+	 * If not provided a default icon will be used.
 	 */
-	icon?: string;
+	icon?: string | UriComponents;
 
 	/**
 	 * Optional actions to appear as links after the welcome banner message.

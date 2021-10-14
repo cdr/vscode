@@ -8,20 +8,21 @@ import { CancellationToken } from 'vs/base/common/cancellation';
 import { onUnexpectedError, onUnexpectedExternalError } from 'vs/base/common/errors';
 import { Emitter } from 'vs/base/common/event';
 import { Disposable, IDisposable, MutableDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { commonPrefixLength, commonSuffixLength } from 'vs/base/common/strings';
+import { CoreEditingCommands } from 'vs/editor/browser/controller/coreCommands';
 import { IActiveCodeEditor } from 'vs/editor/browser/editorBrowser';
+import { RedoCommand, UndoCommand } from 'vs/editor/browser/editorExtensions';
+import { EditorOption } from 'vs/editor/common/config/editorOptions';
+import { EditOperation } from 'vs/editor/common/core/editOperation';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import { ITextModel } from 'vs/editor/common/model';
 import { InlineCompletion, InlineCompletionContext, InlineCompletions, InlineCompletionsProvider, InlineCompletionsProviderRegistry, InlineCompletionTriggerKind } from 'vs/editor/common/modes';
-import { EditOperation } from 'vs/editor/common/core/editOperation';
+import { BaseGhostTextWidgetModel, GhostText, GhostTextWidgetModel } from 'vs/editor/contrib/inlineCompletions/ghostText';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { EditorOption } from 'vs/editor/common/config/editorOptions';
-import { RedoCommand, UndoCommand } from 'vs/editor/browser/editorExtensions';
-import { CoreEditingCommands } from 'vs/editor/browser/controller/coreCommands';
-import { GhostTextWidgetModel, GhostText, BaseGhostTextWidgetModel } from 'vs/editor/contrib/inlineCompletions/ghostText';
-import { inlineCompletionToGhostText, NormalizedInlineCompletion } from './inlineCompletionToGhostText';
 import { inlineSuggestCommitId } from './consts';
 import { SharedInlineCompletionCache } from './ghostTextModel';
+import { inlineCompletionToGhostText, NormalizedInlineCompletion } from './inlineCompletionToGhostText';
 
 export class InlineCompletionsModel extends Disposable implements GhostTextWidgetModel {
 	protected readonly onDidChangeEmitter = new Emitter<void>();
@@ -579,5 +580,31 @@ export async function provideInlineCompletions(
 				result.dispose();
 			}
 		},
+	};
+}
+
+/**
+ * Shrinks the range if the text has a suffix/prefix that agrees with the text buffer.
+ * E.g. text buffer: `ab[cdef]ghi`, [...] is the replace range, `cxyzf` is the new text.
+ * Then the minimized inline completion has range `abc[de]fghi` and text `xyz`.
+ */
+export function minimizeInlineCompletion(model: ITextModel, inlineCompletion: NormalizedInlineCompletion): NormalizedInlineCompletion;
+export function minimizeInlineCompletion(model: ITextModel, inlineCompletion: NormalizedInlineCompletion | undefined): NormalizedInlineCompletion | undefined;
+export function minimizeInlineCompletion(model: ITextModel, inlineCompletion: NormalizedInlineCompletion | undefined): NormalizedInlineCompletion | undefined {
+	if (!inlineCompletion) {
+		return inlineCompletion;
+	}
+	const valueToReplace = model.getValueInRange(inlineCompletion.range);
+	const commonPrefixLen = commonPrefixLength(valueToReplace, inlineCompletion.text);
+	const startOffset = model.getOffsetAt(inlineCompletion.range.getStartPosition()) + commonPrefixLen;
+	const start = model.getPositionAt(startOffset);
+
+	const remainingValueToReplace = valueToReplace.substr(commonPrefixLen);
+	const commonSuffixLen = commonSuffixLength(remainingValueToReplace, inlineCompletion.text);
+	const end = model.getPositionAt(Math.max(startOffset, model.getOffsetAt(inlineCompletion.range.getEndPosition()) - commonSuffixLen));
+
+	return {
+		range: Range.fromPositions(start, end),
+		text: inlineCompletion.text.substr(commonPrefixLen, inlineCompletion.text.length - commonPrefixLen - commonSuffixLen),
 	};
 }

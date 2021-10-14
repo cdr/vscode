@@ -5,7 +5,7 @@
 
 import { URI } from 'vs/base/common/uri';
 import { Emitter, DebounceEmitter } from 'vs/base/common/event';
-import { IDecorationsService, IDecoration, IResourceDecorationChangeEvent, IDecorationsProvider, IDecorationData } from './decorations';
+import { IDecorationsService, IDecoration, IResourceDecorationChangeEvent, IDecorationsProvider, IDecorationData } from '../common/decorations';
 import { TernarySearchTree } from 'vs/base/common/map';
 import { IDisposable, toDisposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { isThenable } from 'vs/base/common/async';
@@ -20,7 +20,7 @@ import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { hash } from 'vs/base/common/hash';
 import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 import { iconRegistry } from 'vs/base/common/codicons';
-import { asArray } from 'vs/base/common/arrays';
+import { asArray, distinct } from 'vs/base/common/arrays';
 
 class DecorationRule {
 
@@ -186,7 +186,8 @@ class DecorationStyles {
 		let labelClassName = rule.itemColorClassName;
 		let badgeClassName = rule.itemBadgeClassName;
 		let iconClassName = rule.iconBadgeClassName;
-		let tooltip = data.filter(d => !isFalsyOrWhitespace(d.tooltip)).map(d => d.tooltip).join(' • ');
+		let tooltip = distinct(data.filter(d => !isFalsyOrWhitespace(d.tooltip)).map(d => d.tooltip)).join(' • ');
+		let strikethrough = data.some(d => d.strikethrough);
 
 		if (onlyChildren) {
 			// show items from its children only
@@ -198,6 +199,7 @@ class DecorationStyles {
 			labelClassName,
 			badgeClassName,
 			iconClassName,
+			strikethrough,
 			tooltip,
 			dispose: () => {
 				if (rule?.release()) {
@@ -396,7 +398,7 @@ export class DecorationsService implements IDecorationsService {
 			this._onDidChangeDecorationsDelayed,
 			this._onDidChangeDecorations
 		);
-		const remove = this._data.push(wrapper);
+		const remove = this._data.unshift(wrapper);
 
 		this._onDidChangeDecorations.fire({
 			// everything might have changed

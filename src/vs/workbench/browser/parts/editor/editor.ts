@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GroupIdentifier, IWorkbenchEditorConfiguration, IEditorInput, IEditorIdentifier, IEditorCloseEvent, IEditorPartOptions, IEditorPartOptionsChangeEvent } from 'vs/workbench/common/editor';
+import { GroupIdentifier, IWorkbenchEditorConfiguration, IEditorIdentifier, IEditorCloseEvent, IEditorPartOptions, IEditorPartOptionsChangeEvent, SideBySideEditor } from 'vs/workbench/common/editor';
+import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { IEditorGroup, GroupDirection, IAddGroupOptions, IMergeGroupOptions, GroupsOrder, GroupsArrangement } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { Dimension } from 'vs/base/browser/dom';
@@ -11,10 +12,9 @@ import { Event } from 'vs/base/common/event';
 import { IConfigurationChangeEvent, IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ISerializableView } from 'vs/base/browser/ui/grid/grid';
-import { getIEditor } from 'vs/editor/browser/editorBrowser';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { isObject, withNullAsUndefined } from 'vs/base/common/types';
-import { IEditorOptions, ITextEditorOptions } from 'vs/platform/editor/common/editor';
+import { isObject } from 'vs/base/common/types';
+import { IEditorOptions } from 'vs/platform/editor/common/editor';
 
 export interface IEditorPartCreationOptions {
 	restorePreviousState: boolean;
@@ -59,16 +59,16 @@ export function getEditorPartOptions(configurationService: IConfigurationService
 		Object.assign(options, config.workbench.editor);
 
 		// Special handle array types and convert to Set
-		if (isObject(config.workbench.editor.experimentalAutoLockGroups)) {
-			options.experimentalAutoLockGroups = new Set();
+		if (isObject(config.workbench.editor.autoLockGroups)) {
+			options.autoLockGroups = new Set();
 
-			for (const [editorId, enablement] of Object.entries(config.workbench.editor.experimentalAutoLockGroups)) {
+			for (const [editorId, enablement] of Object.entries(config.workbench.editor.autoLockGroups)) {
 				if (enablement === true) {
-					options.experimentalAutoLockGroups.add(editorId);
+					options.autoLockGroups.add(editorId);
 				}
 			}
 		} else {
-			options.experimentalAutoLockGroups = undefined;
+			options.autoLockGroups = undefined;
 		}
 	}
 
@@ -122,7 +122,7 @@ export interface IEditorGroupView extends IDisposable, ISerializableView, IEdito
 
 	readonly onDidFocus: Event<void>;
 
-	readonly onDidOpenEditorFail: Event<IEditorInput>;
+	readonly onDidOpenEditorFail: Event<EditorInput>;
 	readonly onDidCloseEditor: Event<IEditorCloseEvent>;
 
 	/**
@@ -146,17 +146,14 @@ export interface IEditorGroupView extends IDisposable, ISerializableView, IEdito
 	relayout(): void;
 }
 
-export function getActiveTextEditorOptions(group: IEditorGroup, expectedActiveEditor?: IEditorInput, presetOptions?: IEditorOptions): ITextEditorOptions {
-	const activeGroupCodeEditor = group.activeEditorPane ? getIEditor(group.activeEditorPane.getControl()) : undefined;
-	if (activeGroupCodeEditor) {
-		if (!expectedActiveEditor || !group.activeEditor || expectedActiveEditor.matches(group.activeEditor)) {
-			const textOptions: ITextEditorOptions = {
-				...presetOptions,
-				viewState: withNullAsUndefined(activeGroupCodeEditor.saveViewState())
-			};
+export function fillActiveEditorViewState(group: IEditorGroup, expectedActiveEditor?: EditorInput, presetOptions?: IEditorOptions): IEditorOptions {
+	if (!expectedActiveEditor || !group.activeEditor || expectedActiveEditor.matches(group.activeEditor)) {
+		const options: IEditorOptions = {
+			...presetOptions,
+			viewState: group.activeEditorPane?.getViewState()
+		};
 
-			return textOptions;
-		}
+		return options;
 	}
 
 	return presetOptions || Object.create(null);
@@ -179,13 +176,45 @@ export interface EditorServiceImpl extends IEditorService {
 	readonly onDidMostRecentlyActiveEditorsChange: Event<void>;
 }
 
-export interface IInternalEditorOpenOptions {
+export interface IInternalEditorTitleControlOptions {
 
 	/**
-	 * Optimization: when we know that many editors open at once,
-	 * setting `skipTitleUpdate` for the `openEditor` call will
-	 * not bother to update the title area control. The caller has
-	 * to manually ensure the title area control is updated.
+	 * A hint to defer updating the title control for perf reasons.
+	 * The caller must ensure to update the title control then.
 	 */
 	skipTitleUpdate?: boolean;
+}
+
+export interface IInternalEditorOpenOptions extends IInternalEditorTitleControlOptions {
+
+	/**
+	 * Whether to consider a side by side editor as matching
+	 * when figuring out if the editor to open is already
+	 * opened or not. By default, side by side editors will
+	 * not be considered as matching, even if the editor is
+	 * opened in one of the sides.
+	 */
+	supportSideBySide?: SideBySideEditor.ANY | SideBySideEditor.BOTH;
+}
+
+export interface IInternalEditorCloseOptions extends IInternalEditorTitleControlOptions {
+
+	/**
+	 * A hint that the editor is closed due to an error opening. This can be
+	 * used to optimize how error toasts are appearing if any.
+	 */
+	fromError?: boolean;
+
+	/**
+	 * A hint that the editor is closed because it moves to another group.
+	 */
+	fromMove?: boolean;
+}
+
+export interface IInternalMoveCopyOptions extends IInternalEditorTitleControlOptions {
+
+	/**
+	 * Whether to close the editor at the source or keep it.
+	 */
+	keepCopy?: boolean;
 }

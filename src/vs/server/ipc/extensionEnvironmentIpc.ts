@@ -17,7 +17,10 @@ import { INLSExtensionScannerService } from 'vs/server/services/nlsExtensionScan
 import { createServerURITransformer } from 'vs/server/uriTransformer';
 
 
-// See ../../workbench/services/remote/common/remoteAgentEnvironmentChannel.ts
+/**
+ * @see `RemoteExtensionEnvironmentChannelClient`
+ * @TODO Consider using `ProxyChannel.fromService`
+ */
 export class ExtensionEnvironmentChannel implements IServerChannel {
 	public constructor(
 		@INativeEnvironmentService private readonly environment: INativeEnvironmentService,
@@ -70,11 +73,11 @@ export class ExtensionEnvironmentChannel implements IServerChannel {
 	}
 
 	private getDiagnosticInfo(): Promise<IDiagnosticInfo> {
-		throw new Error('not implemented');
+		throw new Error('Not implemented');
 	}
 
 	private async disableTelemetry(): Promise<void> {
-		this.telemetry.setEnabled(false);
+		throw new Error('Not implemented');
 	}
 
 	private async logTelemetry(eventName: string, data: ITelemetryData): Promise<void> {

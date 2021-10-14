@@ -82,13 +82,34 @@
 	"inlayHints.parameterNames.none": "Disable parameter name hints.",
 	"inlayHints.parameterNames.literals": "Enable parameter name hints only for literal arguments.",
 	"inlayHints.parameterNames.all": "Enable parameter name hints for literal and non-literal arguments.",
-	"configuration.inlayHints.parameterNames.enabled": "Enable/disable inlay hints for parameter names:\n```typescript\n\nparseInt(/* str: */ '123', /* radix: */ 8)\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
-	"configuration.inlayHints.parameterNames.suppressWhenArgumentMatchesName": "Suppress parameter name hints on arguments whose text is identical to the parameter name.",
-	"configuration.inlayHints.parameterTypes.enabled": "Enable/disable inlay hints for implicit parameter types:\n```typescript\n\nel.addEventListener('click', e /* :MouseEvent */ => ...)\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
-	"configuration.inlayHints.variableTypes.enabled": "Enable/disable inlay hints for implicit variable types:\n```typescript\n\nconst foo /* :number */ = Date.now();\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
-	"configuration.inlayHints.propertyDeclarationTypes.enabled": "Enable/disable inlay hints for implicit types on property declarations:\n```typescript\n\nclass Foo {\n\tprop /* :number */ = Date.now;\n}\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
-	"configuration.inlayHints.functionLikeReturnTypes.enabled": "Enable/disable inlay hints for implicit return types on function signatures:\n```typescript\n\nfunction foo() /* :number */ {\n\treturn Date.now();\n} \n \n```\nRequires using TypeScript 4.4+ in the workspace.",
-	"configuration.inlayHints.enumMemberValues.enabled": "Enable/disable inlay hints for member values in enum declarations:\n```typescript\n\nenum MyValue {\n\tA /* = 0 */;\n\tB /* = 1 */;\n}\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+	"configuration.inlayHints.parameterNames.enabled": {
+		"message": "Enable/disable inlay hints for parameter names:\n```typescript\n\nparseInt(/* str: */ '123', /* radix: */ 8)\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
+	"configuration.inlayHints.parameterNames.suppressWhenArgumentMatchesName": {
+		"message": "Suppress parameter name hints on arguments whose text is identical to the parameter name.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
+	"configuration.inlayHints.parameterTypes.enabled": {
+		"message": "Enable/disable inlay hints for implicit parameter types:\n```typescript\n\nel.addEventListener('click', e /* :MouseEvent */ => ...)\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
+	"configuration.inlayHints.variableTypes.enabled": {
+		"message": "Enable/disable inlay hints for implicit variable types:\n```typescript\n\nconst foo /* :number */ = Date.now();\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
+	"configuration.inlayHints.propertyDeclarationTypes.enabled": {
+		"message": "Enable/disable inlay hints for implicit types on property declarations:\n```typescript\n\nclass Foo {\n\tprop /* :number */ = Date.now();\n}\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
+	"configuration.inlayHints.functionLikeReturnTypes.enabled": {
+		"message": "Enable/disable inlay hints for implicit return types on function signatures:\n```typescript\n\nfunction foo() /* :number */ {\n\treturn Date.now();\n} \n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
+	"configuration.inlayHints.enumMemberValues.enabled": {
+		"message": "Enable/disable inlay hints for member values in enum declarations:\n```typescript\n\nenum MyValue {\n\tA /* = 0 */;\n\tB /* = 1 */;\n}\n \n```\nRequires using TypeScript 4.4+ in the workspace.",
+		"comment": "The text inside the ``` block is code and should not be localized."
+	},
 	"taskDefinition.tsconfig.description": "The tsconfig file that defines the TS build.",
 	"javascript.suggestionActions.enabled": "Enable/disable suggestion diagnostics for JavaScript files in the editor.",
 	"typescript.suggestionActions.enabled": "Enable/disable suggestion diagnostics for TypeScript files in the editor.",
@@ -98,11 +119,15 @@
 	"typescript.preferences.importModuleSpecifier.relative": "Prefers a relative path to the imported file location.",
 	"typescript.preferences.importModuleSpecifier.nonRelative": "Prefers a non-relative import based on the `baseUrl` or `paths` configured in your `jsconfig.json` / `tsconfig.json`.",
 	"typescript.preferences.importModuleSpecifier.projectRelative": "Prefers a non-relative import only if the relative import path would leave the package or project directory. Requires using TypeScript 4.2+ in the workspace.",
-	"typescript.preferences.importModuleSpecifierEnding": "Preferred path ending for auto imports.",
+	"typescript.preferences.importModuleSpecifierEnding": "Preferred path ending for auto imports. Requires using TypeScript 4.5+ in the workspace.",
 	"typescript.preferences.importModuleSpecifierEnding.auto": "Use project settings to select a default.",
 	"typescript.preferences.importModuleSpecifierEnding.minimal": "Shorten `./component/index.js` to `./component`.",
 	"typescript.preferences.importModuleSpecifierEnding.index": "Shorten `./component/index.js` to `./component/index`.",
 	"typescript.preferences.importModuleSpecifierEnding.js": "Do not shorten path endings; include the `.js` extension.",
+	"typescript.preferences.jsxAttributeCompletionStyle": "Preferred style for JSX attribute completions.",
+	"typescript.preferences.jsxAttributeCompletionStyle.auto": "Insert `={}` or `=\"\"` after attribute names based on the prop type.",
+	"typescript.preferences.jsxAttributeCompletionStyle.braces": "Insert `={}` after attribute names.",
+	"typescript.preferences.jsxAttributeCompletionStyle.none": "Only insert attribute names.",
 	"typescript.preferences.includePackageJsonAutoImports": "Enable/disable searching `package.json` dependencies for available auto imports.",
 	"typescript.preferences.includePackageJsonAutoImports.auto": "Search dependencies based on estimated performance impact.",
 	"typescript.preferences.includePackageJsonAutoImports.on": "Always search dependencies.",

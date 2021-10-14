@@ -77,7 +77,7 @@ export class TerminalEditor extends EditorPane {
 		this._findState = new FindReplaceState();
 		this._findWidget = instantiationService.createInstance(TerminalFindWidget, this._findState);
 		this._dropdownMenu = this._register(menuService.createMenu(MenuId.TerminalNewDropdownContext, _contextKeyService));
-		this._instanceMenu = this._register(menuService.createMenu(MenuId.TerminalInstanceContext, _contextKeyService));
+		this._instanceMenu = this._register(menuService.createMenu(MenuId.TerminalEditorInstanceContext, _contextKeyService));
 	}
 
 	override async setInput(newInput: TerminalEditorInput, options: IEditorOptions | undefined, context: IEditorOpenContext, token: CancellationToken) {
@@ -88,7 +88,7 @@ export class TerminalEditor extends EditorPane {
 		if (this._lastDimension) {
 			this.layout(this._lastDimension);
 		}
-		this._editorInput.terminalInstance?.setVisible(true);
+		this._editorInput.terminalInstance?.setVisible(this.isVisible());
 		if (this._editorInput.terminalInstance) {
 			// since the editor does not monitor focus changes, for ex. between the terminal
 			// panel and the editors, this is needed so that the active instance gets set
@@ -100,6 +100,7 @@ export class TerminalEditor extends EditorPane {
 
 	override clearInput(): void {
 		super.clearInput();
+		this._editorInput?.terminalInstance?.detachFromElement();
 		this._editorInput = undefined;
 	}
 

@@ -91,7 +91,7 @@ defaultStyles.textContent = `
 		max-height: 100%;
 	}
 
-	a {
+	a, a code {
 		color: var(--vscode-textLink-foreground);
 	}
 
@@ -198,7 +198,7 @@ function getVsCodeApiScript(allowMultipleAPIAcquire, state) {
 }
 
 /** @type {Promise<void>} */
-const workerReady = new Promise(async (resolve, reject) => {
+const workerReady = new Promise((resolve, reject) => {
 	if (!areServiceWorkersEnabled()) {
 		return reject(new Error('Service Workers are not enabled. Webviews will not work. Try disabling private/incognito mode.'));
 	}
@@ -456,7 +456,7 @@ const handleInnerClick = (event) => {
 	for (const pathElement of event.composedPath()) {
 		/** @type {any} */
 		const node = pathElement;
-		if (node.tagName === 'A' && node.href) {
+		if (node.tagName && node.tagName.toLowerCase() === 'a' && node.href) {
 			if (node.getAttribute('href') === '#') {
 				event.view.scrollTo(0, 0);
 			} else if (node.hash && (node.getAttribute('href') === node.hash || (baseElement && node.href === baseElement.href + node.hash))) {
@@ -487,7 +487,7 @@ const handleAuxClick =
 			for (const pathElement of event.composedPath()) {
 				/** @type {any} */
 				const node = pathElement;
-				if (node.tagName === 'A' && node.href) {
+				if (node.tagName && node.tagName.toLowerCase() === 'a' && node.href) {
 					event.preventDefault();
 					return;
 				}
@@ -642,6 +642,7 @@ function areServiceWorkersEnabled() {
  *     contents: string;
  *     options: {
  *         readonly allowScripts: boolean;
+ *         readonly allowForms: boolean;
  *         readonly allowMultipleAPIAcquire: boolean;
  *     }
  *     state: any;
@@ -666,6 +667,11 @@ function toContentHtml(data) {
 			}
 		}
 	});
+
+	// Set default aria role
+	if (!newDocument.body.hasAttribute('role')) {
+		newDocument.body.setAttribute('role', 'document');
+	}
 
 	// Inject default script
 	if (options.allowScripts) {
@@ -746,7 +752,6 @@ onDomReady(() => {
 	let updateId = 0;
 	hostMessaging.onMessage('content', async (_event, /** @type {ContentUpdateData} */ data) => {
 		const currentUpdateId = ++updateId;
-
 		try {
 			await workerReady;
 		} catch (e) {
@@ -800,7 +805,16 @@ onDomReady(() => {
 		const newFrame = document.createElement('iframe');
 		newFrame.setAttribute('id', 'pending-frame');
 		newFrame.setAttribute('frameborder', '0');
-		newFrame.setAttribute('sandbox', options.allowScripts ? 'allow-scripts allow-forms allow-same-origin allow-pointer-lock allow-downloads' : 'allow-same-origin allow-pointer-lock');
+
+		const sandboxRules = new Set(['allow-same-origin', 'allow-pointer-lock']);
+		if (options.allowScripts) {
+			sandboxRules.add('allow-scripts');
+			sandboxRules.add('allow-downloads');
+		}
+		if (options.allowForms) {
+			sandboxRules.add('allow-forms');
+		}
+		newFrame.setAttribute('sandbox', Array.from(sandboxRules).join(' '));
 		if (!isFirefox) {
 			newFrame.setAttribute('allow', options.allowScripts ? 'clipboard-read; clipboard-write;' : '');
 		}

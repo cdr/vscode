@@ -1343,6 +1343,14 @@ export class MarkdownString implements vscode.MarkdownString {
 		this.#delegate.supportThemeIcons = value;
 	}
 
+	get supportHtml(): boolean | undefined {
+		return this.#delegate.supportHtml;
+	}
+
+	set supportHtml(value: boolean | undefined) {
+		this.#delegate.supportHtml = value;
+	}
+
 	appendText(value: string): vscode.MarkdownString {
 		this.#delegate.appendText(value);
 		return this;
@@ -1357,8 +1365,6 @@ export class MarkdownString implements vscode.MarkdownString {
 		this.#delegate.appendCodeblock(language ?? '', value);
 		return this;
 	}
-
-
 }
 
 @es5ClassCompat
@@ -3324,6 +3330,7 @@ export class TestRunRequest implements vscode.TestRunRequest {
 export class TestMessage implements vscode.TestMessage {
 	public expectedOutput?: string;
 	public actualOutput?: string;
+	public location?: vscode.Location;
 
 	public static diff(message: string | vscode.MarkdownString, expected: string, actual: string) {
 		const msg = new TestMessage(message);
@@ -3337,14 +3344,7 @@ export class TestMessage implements vscode.TestMessage {
 
 @es5ClassCompat
 export class TestTag implements vscode.TestTag {
-	constructor(
-		public readonly id: string,
-		public readonly label?: string,
-	) {
-		if (/\s/.test(id)) {
-			throw new Error(`Test tag ID "${id}" may not include whitespace`);
-		}
-	}
+	constructor(public readonly id: string) { }
 }
 
 //#endregion

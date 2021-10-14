@@ -12,12 +12,16 @@ import { setUnexpectedErrorHandler } from 'vs/base/common/errors';
 import { combinedDisposable, Disposable } from 'vs/base/common/lifecycle';
 import { Schemas } from 'vs/base/common/network';
 import { getMachineId } from 'vs/base/node/id';
+import { monkeyPatchVSZip } from 'vs/base/node/marketplace';
 import { IPCServer, IServerChannel, ProxyChannel } from 'vs/base/parts/ipc/common/ipc';
+import { listen } from 'vs/base/parts/ipc/node/ipc.net';
 // eslint-disable-next-line code-import-patterns
 import { LogsDataCleaner } from 'vs/code/electron-browser/sharedProcess/contrib/logsDataCleaner';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ConfigurationService } from 'vs/platform/configuration/common/configurationService';
 import { ExtensionHostDebugBroadcastChannel } from 'vs/platform/debug/common/extensionHostDebugIpc';
+import { IDownloadService } from 'vs/platform/download/common/download';
+import { DownloadService } from 'vs/platform/download/common/downloadService';
 import { GlobalExtensionEnablementService } from 'vs/platform/extensionManagement/common/extensionEnablementService';
 import { ExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionGalleryService';
 import { IExtensionGalleryService, IExtensionManagementService, IGlobalExtensionEnablementService } from 'vs/platform/extensionManagement/common/extensionManagement';
@@ -43,11 +47,13 @@ import { RemoteAgentConnectionContext } from 'vs/platform/remote/common/remoteAg
 import { IRequestService } from 'vs/platform/request/common/request';
 import { RequestChannel } from 'vs/platform/request/common/requestIpc';
 import { RequestService } from 'vs/platform/request/node/requestService';
+import { IStorageService } from 'vs/platform/storage/common/storage';
+import { SimpleStorageService } from 'vs/platform/storage/node/simpleStorageService';
 import { resolveCommonProperties } from 'vs/platform/telemetry/common/commonProperties';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { TelemetryLogAppender } from 'vs/platform/telemetry/common/telemetryLogAppender';
-import { ITelemetryServiceConfig, TelemetryService } from 'vs/platform/telemetry/common/telemetryService';
-import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
+import { TelemetryService } from 'vs/platform/telemetry/common/telemetryService';
+import { ITelemetryAppender, NullTelemetryService, supportsTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
 import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
 import ErrorTelemetry from 'vs/platform/telemetry/node/errorTelemetry';
 import { IPtyService, IReconnectConstants, LocalReconnectConstants, TerminalSettingId } from 'vs/platform/terminal/common/terminal';
@@ -70,9 +76,9 @@ import { FileProviderChannel } from 'vs/server/ipc/fileProviderIpc';
 import { TerminalProviderChannel } from 'vs/server/ipc/terminalProviderIpc';
 import { EnvironmentServerService, IEnvironmentServerService } from 'vs/server/services/environmentService';
 import { IIncomingHTTPRequestService, IncomingHTTPRequestService } from 'vs/server/services/net/incomingHttpRequestService';
+import { IWebSocketServerService, WebSocketServerService } from 'vs/server/services/net/webSocketServerService';
 import { INLSExtensionScannerService, NLSExtensionScannerService } from 'vs/server/services/nlsExtensionScannerService';
 import { IServerThemeService, ServerThemeService } from 'vs/server/services/themeService';
-import { IWebSocketServerService, WebSocketServerService } from 'vs/server/services/net/webSocketServerService';
 import { createServerURITransformer } from 'vs/server/uriTransformer';
 import { REMOTE_TERMINAL_CHANNEL_NAME } from 'vs/workbench/contrib/terminal/common/remoteTerminalChannel';
 import { IExtensionResourceLoaderService } from 'vs/workbench/services/extensionResourceLoader/common/extensionResourceLoader';
@@ -82,7 +88,6 @@ import { ILifecycleService, NullLifecycleService } from 'vs/workbench/services/l
 import { REMOTE_FILE_SYSTEM_CHANNEL_NAME } from 'vs/workbench/services/remote/common/remoteAgentFileSystemChannel';
 import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 import { UriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentityService';
-import { monkeyPatchVSZip } from 'vs/base/node/marketplace';
 
 interface IServerProcessMainStartupOptions {
 	listenWhenReady?: boolean;
@@ -145,7 +150,7 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 		if (startupOptions.listenWhenReady) {
 			const { serverUrl } = this.configuration;
 
-			await listen(this.netServer, parseInt(serverUrl.port, 10), serverUrl.hostname);
+			await listen(this.netServer, { port: parseInt(serverUrl.port, 10), hostname: serverUrl.hostname });
 			logService.info(this.logPrefix, 'Active and listening at:', serverUrl.toString());
 		}
 
@@ -225,24 +230,26 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 		// Instantiation
 		const instantiationService = new InstantiationService(services);
 
+		// Downloads
+		services.set(IDownloadService, new SyncDescriptor(DownloadService));
+
 		// Telemetry
 		let telemetryService: ITelemetryService;
-
-		if (!environmentServerService.isExtensionDevelopment && !environmentServerService.disableTelemetry && productService.enableTelemetry) {
+		if (supportsTelemetry(productService, environmentServerService)) {
 			const machineId = await this.resolveMachineId();
-
-			const appender = combinedAppender(new AppInsightsAppender('code-server', null, () => new TelemetryClient()), new TelemetryLogAppender(loggerService, environmentServerService));
+			const appenders: ITelemetryAppender[] = [
+				new AppInsightsAppender('code-server', null, () => new TelemetryClient()),
+				new TelemetryLogAppender(loggerService, environmentServerService),
+			];
 
 			const commonProperties = resolveCommonProperties(fileService, release(), hostname(), process.arch, environmentServerService.commit, product.version, machineId, undefined, environmentServerService.installSourcePath, 'code-server');
 
-			const config: ITelemetryServiceConfig = {
-				appender,
+			telemetryService = new TelemetryService({
+				appenders,
 				commonProperties,
-				piiPaths: environmentServerService.piiPaths,
 				sendErrorTelemetry: true,
-			};
-
-			telemetryService = new TelemetryService(config, configurationService);
+				piiPaths: environmentServerService.piiPaths,
+			}, configurationService);
 		} else {
 			telemetryService = NullTelemetryService;
 		}
@@ -293,16 +300,19 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 		services.set(IIncomingHTTPRequestService, incomingHTTPRequestService);
 
 		// IPC Server
-		const ipcServer = this._register(new
-			IPCServer<RemoteAgentConnectionContext>(webSocketServerService.
-				onDidClientConnect
-	,		));
+		const ipcServer = this._register(new IPCServer<RemoteAgentConnectionContext>(webSocketServerService.onDidClientConnect));
+
+		// Storage
+
+		const storageService = new SimpleStorageService(logService, environmentServerService);
+		await storageService.initialize();
+		services.set(IStorageService, storageService);
 
 		// Settings Sync
 		services.set(IUserDataSyncAccountService, new SyncDescriptor(UserDataSyncAccountService));
 		services.set(IUserDataSyncLogService, new SyncDescriptor(UserDataSyncLogService));
 		services.set(IUserDataSyncUtilService, new UserDataSyncUtilServiceClient(
-			ipcServer.getChannel('userDataSyncUtil', client => client.ctx.remoteAuthority !== this.configuration.serverUrl.hostname)));
+			ipcServer.getChannel('userDataSyncUtil', client => client.ctx.remoteAuthority === this.configuration.serverUrl.hostname)));
 		services.set(IGlobalExtensionEnablementService, new SyncDescriptor(GlobalExtensionEnablementService));
 		services.set(IIgnoredExtensionsManagementService, new SyncDescriptor(IgnoredExtensionsManagementService));
 		services.set(IExtensionsStorageSyncService, new SyncDescriptor(ExtensionsStorageSyncService));
@@ -319,10 +329,9 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 			graceTime: LocalReconnectConstants.GraceTime,
 			shortGraceTime: LocalReconnectConstants.ShortGraceTime,
 			scrollback: configurationService.getValue<number>(TerminalSettingId.PersistentSessionScrollback) ?? 100,
-			useExperimentalSerialization: configurationService.getValue<boolean>(TerminalSettingId.PersistentSessionExperimentalSerializer) ?? true,
 		};
 
-		const ptyHostService = new PtyHostService(reconnectConstants, configurationService, logService, telemetryService);
+		const ptyHostService = new PtyHostService(reconnectConstants, configurationService, environmentServerService, logService, telemetryService);
 		services.set(IPtyService, this._register(ptyHostService));
 
 		// Channels
@@ -402,17 +411,4 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 	}
 }
 
-export const listen = (server: NetServer, port: number, host: string) => {
-	return new Promise<void>(async (resolve, reject) => {
-		server.on('error', reject);
 
-		const onListen = () => {
-			// Promise resolved earlier so this is an unrelated error.
-			server.off('error', reject);
-
-			resolve();
-		};
-		// [] is the correct format when using :: but Node errors with them.
-		server.listen(port, host.replace(/^\[|\]$/g, ''), onListen);
-	});
-};

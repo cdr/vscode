@@ -10,6 +10,7 @@ import { IBannerService } from 'vs/workbench/services/banner/browser/bannerServi
 import { Codicon, iconRegistry } from 'vs/base/common/codicons';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
+import { URI } from 'vs/base/common/uri';
 
 class WelcomeBannerContribution {
 
@@ -29,15 +30,17 @@ class WelcomeBannerContribution {
 			return; // welcome banner dismissed
 		}
 
-		let icon: Codicon | undefined = undefined;
-		if (welcomeBanner.icon) {
+		let icon: Codicon | URI | undefined = undefined;
+		if (typeof welcomeBanner.icon === 'string') {
 			icon = iconRegistry.get(welcomeBanner.icon);
+		} else if (welcomeBanner.icon) {
+			icon = URI.revive(welcomeBanner.icon);
 		}
 
 		bannerService.show({
 			id: 'welcome.banner',
 			message: welcomeBanner.message,
-			icon: icon ?? Codicon.code,
+			icon,
 			actions: welcomeBanner.actions,
 			onClose: () => {
 				storageService.store(WelcomeBannerContribution.WELCOME_BANNER_DISMISSED_KEY, true, StorageScope.GLOBAL, StorageTarget.MACHINE);
