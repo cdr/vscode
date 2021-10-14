@@ -5,7 +5,7 @@
 
 import { createReadStream, promises as fs, readFileSync } from 'fs';
 import { IncomingMessage, Server, ServerResponse } from 'http';
-import { join, normalize } from 'path';
+import { normalize } from 'path';
 import { match, MatchFunction } from 'path-to-regexp';
 import { getMediaOrTextMime, PLAIN_TEXT_MIME_TYPE } from 'vs/base/common/mime';
 import { ProtocolConstants } from 'vs/base/parts/ipc/common/ipc.net';
@@ -17,7 +17,8 @@ import { IEnvironmentServerService } from 'vs/server/services/environmentService
 import { IServerThemeService } from 'vs/server/services/themeService';
 import * as Handlebars from 'handlebars';
 import { FileSystemError } from 'vs/workbench/api/common/extHostTypes';
-import { WebRequestListener, Callback, compileTemplate, WorkbenchErrorTemplate, WORKBENCH_PATH, WorkbenchTemplate, APP_ROOT, contentSecurityPolicies, WebManifest, AssetPaths, PollingURLQueryKeys, ClientTheme, matcherOptions, CSP_NONCE, wellKnownKeys, SERVICE_WORKER_FILE_NAME } from 'vs/server/services/net/common/http';
+import { WebRequestListener, Callback, compileTemplate, WorkbenchErrorTemplate, WorkbenchTemplate, contentSecurityPolicies, WebManifest, PollingURLQueryKeys, ClientTheme, matcherOptions, CSP_NONCE, wellKnownKeys } from 'vs/server/services/net/common/http';
+import { join } from 'vs/base/common/path';
 
 interface RequestHandlerOptions {
 	/**
@@ -39,11 +40,11 @@ export class IncomingHTTPRequestService extends AbstractIncomingRequestService<W
 	/** Stored callback URI's sent over from client-side `PollingURLCallbackProvider`. */
 	private callbackUriToRequestId = new Map<string, Callback>();
 
-	private templates = {
-		workbenchError: compileTemplate<WorkbenchErrorTemplate>(join(WORKBENCH_PATH, 'workbench-error.html')),
-		workbenchDev: compileTemplate<WorkbenchTemplate>(join(WORKBENCH_PATH, 'workbench-dev.html')),
-		workbenchProd: compileTemplate<WorkbenchTemplate>(join(WORKBENCH_PATH, 'workbench.html')),
-		callback: readFileSync(join(APP_ROOT, 'resources', 'web', 'callback.html')).toString(),
+	private templates: {
+		workbenchError: HandlebarsTemplateDelegate;
+		workbenchDev: HandlebarsTemplateDelegate
+		workbenchProd: HandlebarsTemplateDelegate
+		callback: string
 	};
 
 	private contentSecurityPolicyHeaderContent = Object
@@ -126,7 +127,7 @@ export class IncomingHTTPRequestService extends AbstractIncomingRequestService<W
 	 * @remark this is separated to satisfy the browser's relative scope requirements.
 	 */
 	private $serviceWorker: WebRequestListener = async (req, res) => {
-		return this.serveFile(AssetPaths.ServiceWorker, req, res, {
+		return this.serveFile(this.environmentService.serviceWorkerPath, req, res, {
 			'Service-Worker-Allowed': req.pathPrefix,
 		});
 	};
@@ -135,7 +136,7 @@ export class IncomingHTTPRequestService extends AbstractIncomingRequestService<W
 	 * Static files endpoint.
 	 */
 	private $static: WebRequestListener<string[]> = async (req, res, params) => {
-		return this.serveFile(join(APP_ROOT, params[0]), req, res);
+		return this.serveFile(join(this.environmentService.appRoot, params[0]), req, res);
 	};
 
 	/**
@@ -266,7 +267,7 @@ export class IncomingHTTPRequestService extends AbstractIncomingRequestService<W
 	 * Webview endpoint
 	 */
 	private $webview: WebRequestListener<string[]> = async (req, res, params) => {
-		return this.serveFile(join(AssetPaths.Webview, params[0]), req, res);
+		return this.serveFile(join(this.environmentService.webviewBasePath, params[0]), req, res);
 	};
 
 	/**
@@ -373,13 +374,21 @@ export class IncomingHTTPRequestService extends AbstractIncomingRequestService<W
 			return JSON.stringify(obj, null, isBuilt ? undefined : 2);
 		});
 
+		const { workbenchTemplatePath, callbackEndpoint, serviceWorkerFileName, staticBase } = environmentService;
+
+		this.templates = {
+			workbenchError: compileTemplate<WorkbenchErrorTemplate>(join(workbenchTemplatePath, 'workbench-error.html')),
+			workbenchDev: compileTemplate<WorkbenchTemplate>(join(workbenchTemplatePath, 'workbench-dev.html')),
+			workbenchProd: compileTemplate<WorkbenchTemplate>(join(workbenchTemplatePath, 'workbench.html')),
+			callback: readFileSync(callbackEndpoint).toString(),
+		};
+
 		const routePairs: readonly RoutePair[] = [
 			['/manifest.webmanifest', this.$webManifest],
-			[`/${SERVICE_WORKER_FILE_NAME}`, this.$serviceWorker],
+			[`/${serviceWorkerFileName}`, this.$serviceWorker],
 			// Legacy browsers.
 			['/manifest.json', this.$webManifest],
-			['/favicon.ico', this.serveFile.bind(this, AssetPaths.Favicon)],
-			[`${AssetPaths.StaticBase}/(.*)`, this.$static],
+			[`${staticBase}/(.*)`, this.$static],
 			['/webview/(.*)', this.$webview],
 			['/', this.$root],
 			['/.json', this.$webConfig],

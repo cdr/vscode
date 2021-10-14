@@ -18,10 +18,11 @@ import { getLogLevel } from 'vs/platform/log/common/log';
 import { IProductService } from 'vs/platform/product/common/productService';
 import { toWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { IWebWorkspace, IWorkbenchConfigurationSerialized } from 'vs/platform/workspaces/common/workbench';
-import { AssetPaths, ICON_SIZES, SERVICE_WORKER_FILE_NAME } from 'vs/server/services/net/common/http';
+import { ICON_SIZES } from 'vs/server/services/net/common/http';
 import { getCachedNlsConfiguration, getLocaleFromConfig } from 'vs/workbench/services/extensions/node/nls';
 import { RemoteExtensionLogFileName } from 'vs/workbench/services/remote/common/remoteAgentService';
 import { ParsedRequest } from './net/abstractIncomingRequestService';
+import { join } from 'vs/base/common/path';
 
 export interface IEnvironmentServerService extends INativeEnvironmentService {
 	readonly serverUrl: URL;
@@ -32,6 +33,14 @@ export interface IEnvironmentServerService extends INativeEnvironmentService {
 	readonly remoteExtensionLogsPath: string;
 	createWorkbenchWebConfiguration: (req: ParsedRequest) => Promise<IWorkbenchConfigurationSerialized>;
 	nlsConfigurationPromise: Promise<NLSConfiguration>
+
+	readonly workbenchTemplatePath: string
+	readonly webviewBasePath: string
+	readonly serviceWorkerFileName: string
+	readonly serviceWorkerPath: string
+	readonly proxyUri: string
+	readonly staticBase: string
+	readonly callbackEndpoint: string
 }
 
 export const IEnvironmentServerService = refineServiceDecorator<INativeEnvironmentService, IEnvironmentServerService>(INativeEnvironmentService);
@@ -91,17 +100,17 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 			// Service Worker
 			serviceWorker: {
 				scope: req.pathPrefix,
-				url: this.createRequestUrl(req, SERVICE_WORKER_FILE_NAME).toString(),
+				url: this.createRequestUrl(req, this.serviceWorkerFileName).toString(),
 			},
 
 			// Endpoints
 			logoutEndpointUrl: logoutEndpointUrl.toString(),
-			webEndpointUrl: this.createRequestUrl(req, AssetPaths.StaticBase).toString(),
-			webEndpointUrlTemplate: this.createRequestUrl(req, AssetPaths.StaticBase).toString(),
+			webEndpointUrl: this.createRequestUrl(req, this.staticBase).toString(),
+			webEndpointUrlTemplate: this.createRequestUrl(req, this.staticBase).toString(),
 
 			// Proxy
 			/** The URL constructor should be decoded here to retain the port template variable. */
-			proxyEndpointUrlTemplate: decodeURI(this.createRequestUrl(req, AssetPaths.ProxyUri).toString()),
+			proxyEndpointUrlTemplate: decodeURI(this.createRequestUrl(req, this.proxyUri).toString()),
 
 			// Metadata
 			icons: ICON_SIZES.map((size => ({
@@ -291,6 +300,37 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 			...this.extraExtensionPaths,
 			...this.extraBuiltinExtensionPaths,
 		];
+	}
+
+	@memoize
+	public get workbenchTemplatePath(): string {
+		return join(this.appRoot, 'vs', 'code', 'browser', 'workbench');
+	}
+
+	@memoize
+	public get webviewBasePath(): string {
+		return join(this.appRoot, 'vs', 'workbench', 'contrib', 'webview', 'browser', 'pre');
+	}
+
+	public get serviceWorkerFileName(): string {
+		return 'service-worker.js';
+	}
+
+	@memoize
+	public get serviceWorkerPath(): string {
+		return join(this.appRoot, 'vs', 'code', 'browser', 'workbench', this.serviceWorkerFileName);
+	}
+
+	public get proxyUri(): string {
+		return '/proxy/{port}';
+	}
+
+	public get staticBase(): string {
+		return '/static';
+	}
+
+	public get callbackEndpoint(): string {
+		return join(this.appRoot, 'resources', 'web', 'callback.html');
 	}
 }
 
