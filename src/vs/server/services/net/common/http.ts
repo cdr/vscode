@@ -13,7 +13,8 @@ import { ParsedRequest } from 'vs/server/services/net/abstractIncomingRequestSer
 import * as Handlebars from 'handlebars';
 import { IWorkbenchConfigurationSerialized } from 'vs/platform/workspaces/common/workbench';
 
-export const APP_ROOT = path.join(__dirname, '..', '..', '..', '..', '..', '..');
+// TODO: needs to resolve from here and when bundled
+export const APP_ROOT = path.join(__dirname, '..', '..', '..');
 export const WORKBENCH_PATH = path.join(APP_ROOT, 'out', 'vs', 'code', 'browser', 'workbench');
 export const SERVICE_WORKER_FILE_NAME = 'service-worker.js';
 

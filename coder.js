@@ -48,6 +48,8 @@ const vscodeResources = [
 	'out-build/vs/workbench/contrib/tasks/**/*.json',
 	'out-build/vs/platform/files/**/*.md',
 	'out-build/vs/webPackagePaths.js',
+	// TODO: probably need to bundle this
+	// 'out-build/vs/code/browser/workbench/service-worker.js',
 	'!**/test/**'
 ];
 
