@@ -51,6 +51,7 @@ const vscodeServerResources = [
 	'out-build/vs/platform/environment/node/userDataPath.js',
 
 	// Workbench
+	'out-build/vs/code/browser/**/*',
 	'out-build/vs/workbench/browser/media/*-theme.css',
 	'out-build/vs/workbench/contrib/debug/**/*.json',
 	'out-build/vs/workbench/contrib/externalTerminal/**/*.scpt',
@@ -64,12 +65,10 @@ const vscodeServerResources = [
 	// Assets
 	'out-build/vs/**/*.{svg,png,html,jpg}',
 	'out-build/vs/**/markdown.css',
-	'out-build/vs/code/browser/**/*.{js,map}',
 	'out-build/vs/base/browser/ui/octiconLabel/octicons/**',
 	'out-build/vs/workbench/contrib/tasks/**/*.json',
 
 	// Excludes
-	'!out-build/vs/code/browser/**/*.html',
 	'!out-build/vs/**/{electron-browser}/**',
 	'!out-build/vs/editor/standalone/**/*.svg',
 	'!out-build/vs/workbench/**/*-tb.png',
