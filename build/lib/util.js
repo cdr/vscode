@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildWebNodePaths = exports.createExternalLoaderConfig = exports.acquireWebNodePaths = exports.getElectronVersion = exports.streamToPromise = exports.versionStringToNumber = exports.filter = exports.rebase = exports.getVersion = exports.ensureDir = exports.rreddir = exports.rimraf = exports.rewriteSourceMappingURL = exports.stripSourceMappingURL = exports.loadSourcemaps = exports.cleanNodeModules = exports.skipDirectories = exports.toFileUri = exports.setExecutableBit = exports.fixWin32DirectoryPermissions = exports.incremental = void 0;
+exports.computeChecksums = exports.buildWebNodePaths = exports.createExternalLoaderConfig = exports.acquireWebNodePaths = exports.getElectronVersion = exports.streamToPromise = exports.versionStringToNumber = exports.filter = exports.rebase = exports.getVersion = exports.ensureDir = exports.rreddir = exports.rimraf = exports.rewriteSourceMappingURL = exports.stripSourceMappingURL = exports.loadSourcemaps = exports.cleanNodeModules = exports.skipDirectories = exports.toFileUri = exports.setExecutableBit = exports.fixWin32DirectoryPermissions = exports.incremental = void 0;
 const es = require("event-stream");
 const debounce = require("debounce");
 const _filter = require("gulp-filter");
@@ -14,7 +14,7 @@ const fs = require("fs");
 const _rimraf = require("rimraf");
 const git = require("./git");
 const VinylFile = require("vinyl");
-const root = path.dirname(path.dirname(__dirname));
+const crypto = require("crypto");
 const NoCancellationToken = { isCancellationRequested: () => false };
 function incremental(streamProvider, initial, supportsCancellation) {
     const input = es.through();
@@ -271,9 +271,6 @@ exports.streamToPromise = streamToPromise;
 function getElectronVersion() {
     // NOTE@coder: Fix version due to .yarnrc removal.
     return process.versions.node;
-    const yarnrc = fs.readFileSync(path.join(root, '.yarnrc'), 'utf8');
-    const target = /^target "(.*)"$/m.exec(yarnrc)[1];
-    return target;
 }
 exports.getElectronVersion = getElectronVersion;
 function acquireWebNodePaths() {
@@ -341,3 +338,34 @@ function buildWebNodePaths(outDir) {
     return result;
 }
 exports.buildWebNodePaths = buildWebNodePaths;
+/**
+ * Compute checksums for some files.
+ *
+ * @param out The out folder to read the file from.
+ * @param filenames The paths to compute a checksum for.
+ * @return A map of paths to checksums.
+ */
+function computeChecksums(out, filenames) {
+    let result = {};
+    filenames.forEach(function (filename) {
+        let fullPath = path.join(process.cwd(), out, filename);
+        result[filename] = computeChecksum(fullPath);
+    });
+    return result;
+}
+exports.computeChecksums = computeChecksums;
+/**
+ * Compute checksum for a file.
+ *
+ * @param filename The absolute path to a filename.
+ * @return The checksum for `filename`.
+ */
+function computeChecksum(filename) {
+    let contents = fs.readFileSync(filename);
+    let hash = crypto
+        .createHash('md5')
+        .update(contents)
+        .digest('base64')
+        .replace(/=+$/, '');
+    return hash;
+}

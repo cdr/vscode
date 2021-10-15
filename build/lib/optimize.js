@@ -34,7 +34,7 @@ function loaderConfig() {
     return result;
 }
 exports.loaderConfig = loaderConfig;
-const IS_OUR_COPYRIGHT_REGEXP = /Copyright \(C\) Microsoft Corporation/i;
+const IS_OUR_COPYRIGHT_REGEXP = /Copyright \(C\) Microsoft Corporation|Coder Technologies/i;
 function loader(src, bundledFileHeader, bundleLoader, externalLoaderInfo) {
     let sources = [
         `${src}/vs/loader.js`
@@ -115,6 +115,8 @@ function toBundleStream(src, bundledFileHeader, bundles, fileContentMapper) {
 const DEFAULT_FILE_HEADER = [
     '/*!--------------------------------------------------------',
     ' * Copyright (C) Microsoft Corporation. All rights reserved.',
+    ' * Copyright (C) Coder Technologies. All rights reserved.',
+    ' * See license for additional details.',
     ' *--------------------------------------------------------*/'
 ].join('\n');
 function optimizeTask(opts) {

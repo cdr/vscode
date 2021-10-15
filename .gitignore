@@ -9,7 +9,7 @@ extensions/**/dist/
 /extensions/**/out/
 # NOTE@coder: remove to provide our own server
 # src/vs/server
-resources/server
+# resources/server
 build/node_modules
 coverage/
 test_data/

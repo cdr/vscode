@@ -17,8 +17,9 @@ import * as git from './git';
 import * as VinylFile from 'vinyl';
 import { ThroughStream } from 'through';
 import * as sm from 'source-map';
+import * as crypto from 'crypto';
 
-const root = path.dirname(path.dirname(__dirname));
+// const root = path.dirname(path.dirname(__dirname));
 
 export interface ICancellationToken {
 	isCancellationRequested(): boolean;
@@ -344,7 +345,7 @@ export function acquireWebNodePaths() {
 	const root = path.join(__dirname, '..', '..');
 	const webPackageJSON = path.join(root, '/remote/web', 'package.json');
 	const webPackages = JSON.parse(fs.readFileSync(webPackageJSON, 'utf8')).dependencies;
-	const nodePaths: { [key: string]: string } = { };
+	const nodePaths: { [key: string]: string } = {};
 	for (const key of Object.keys(webPackages)) {
 		const packageJSON = path.join(root, 'node_modules', key, 'package.json');
 		const packageData = JSON.parse(fs.readFileSync(packageJSON, 'utf8'));
@@ -403,3 +404,36 @@ export function buildWebNodePaths(outDir: string) {
 	return result;
 }
 
+/**
+ * Compute checksums for some files.
+ *
+ * @param out The out folder to read the file from.
+ * @param filenames The paths to compute a checksum for.
+ * @return A map of paths to checksums.
+ */
+export function computeChecksums(out: string, filenames: string[]) {
+	let result: Record<string, string> = {};
+	filenames.forEach(function (filename) {
+		let fullPath = path.join(process.cwd(), out, filename);
+		result[filename] = computeChecksum(fullPath);
+	});
+	return result;
+}
+
+/**
+ * Compute checksum for a file.
+ *
+ * @param filename The absolute path to a filename.
+ * @return The checksum for `filename`.
+ */
+function computeChecksum(filename: string) {
+	let contents = fs.readFileSync(filename);
+
+	let hash = crypto
+		.createHash('md5')
+		.update(contents)
+		.digest('base64')
+		.replace(/=+$/, '');
+
+	return hash;
+}

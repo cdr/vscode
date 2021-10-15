@@ -45,7 +45,7 @@ async function main() {
     const libcxxHeadersDownloadDir = process.env['VSCODE_LIBCXX_HEADERS_DIR'];
     const libcxxabiHeadersDownloadDir = process.env['VSCODE_LIBCXXABI_HEADERS_DIR'];
     const arch = process.env['VSCODE_ARCH'];
-    const electronVersion = packageJSON.devDependencies.electron;
+    const electronVersion = packageJSON.optionalDependencies.electron;
     if (!libcxxObjectsDirPath || !libcxxHeadersDownloadDir || !libcxxabiHeadersDownloadDir) {
         throw new Error('Required build env not set');
     }

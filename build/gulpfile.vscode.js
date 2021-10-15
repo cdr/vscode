@@ -109,40 +109,6 @@ const core = task.define('core-ci', task.series(
 ));
 gulp.task(core);
 
-/**
- * Compute checksums for some files.
- *
- * @param {string} out The out folder to read the file from.
- * @param {string[]} filenames The paths to compute a checksum for.
- * @return {Object} A map of paths to checksums.
- */
-function computeChecksums(out, filenames) {
-	let result = {};
-	filenames.forEach(function (filename) {
-		let fullPath = path.join(process.cwd(), out, filename);
-		result[filename] = computeChecksum(fullPath);
-	});
-	return result;
-}
-
-/**
- * Compute checksum for a file.
- *
- * @param {string} filename The absolute path to a filename.
- * @return {string} The checksum for `filename`.
- */
-function computeChecksum(filename) {
-	let contents = fs.readFileSync(filename);
-
-	let hash = crypto
-		.createHash('md5')
-		.update(contents)
-		.digest('base64')
-		.replace(/=+$/, '');
-
-	return hash;
-}
-
 function packageTask(platform, arch, sourceFolderName, destinationFolderName, opts) {
 	opts = opts || {};
 
@@ -155,7 +121,7 @@ function packageTask(platform, arch, sourceFolderName, destinationFolderName, op
 
 		const out = sourceFolderName;
 
-		const checksums = computeChecksums(out, [
+		const checksums = util.computeChecksums(out, [
 			'vs/base/parts/sandbox/electron-browser/preload.js',
 			'vs/workbench/workbench.desktop.main.js',
 			'vs/workbench/workbench.desktop.main.css',

@@ -39,7 +39,7 @@ export function loaderConfig() {
 	return result;
 }
 
-const IS_OUR_COPYRIGHT_REGEXP = /Copyright \(C\) Microsoft Corporation/i;
+const IS_OUR_COPYRIGHT_REGEXP = /Copyright \(C\) Microsoft Corporation|Coder Technologies/i;
 
 function loader(src: string, bundledFileHeader: string, bundleLoader: boolean, externalLoaderInfo?: any): NodeJS.ReadWriteStream {
 	let sources = [
@@ -173,6 +173,8 @@ export interface IOptimizeTaskOpts {
 const DEFAULT_FILE_HEADER = [
 	'/*!--------------------------------------------------------',
 	' * Copyright (C) Microsoft Corporation. All rights reserved.',
+	' * Copyright (C) Coder Technologies. All rights reserved.',
+	' * See license for additional details.',
 	' *--------------------------------------------------------*/'
 ].join('\n');
 

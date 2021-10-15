@@ -47,7 +47,7 @@ export abstract class AbstractIncomingRequestService<E extends NetEventListener>
 	};
 
 	/**
-	 * Begin listening for `eventName`.
+	 * Begins listening for `eventName` defined in super class.
 	 */
 	public listen() {
 		this.netServer.on(this.eventName, this._handleEvent);

@@ -114,7 +114,7 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 
 			// Metadata
 			icons: ICON_SIZES.map((size => ({
-				src: this.createRequestUrl(req, `/static/resources/web/pwa-icon-${size}.png`).toString(),
+				src: this.createRequestUrl(req, `/static/resources/server/code-${size}.png`).toString(),
 				type: 'image/png',
 				sizes: `${size}x${size}`,
 			})))
@@ -304,12 +304,12 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 
 	@memoize
 	public get workbenchTemplatePath(): string {
-		return join(this.appRoot, 'vs', 'code', 'browser', 'workbench');
+		return join(this.appRoot, 'out', 'vs', 'code', 'browser', 'workbench');
 	}
 
 	@memoize
 	public get webviewBasePath(): string {
-		return join(this.appRoot, 'vs', 'workbench', 'contrib', 'webview', 'browser', 'pre');
+		return join(this.appRoot, 'out', 'vs', 'workbench', 'contrib', 'webview', 'browser', 'pre');
 	}
 
 	public get serviceWorkerFileName(): string {
@@ -318,7 +318,7 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 
 	@memoize
 	public get serviceWorkerPath(): string {
-		return join(this.appRoot, 'vs', 'code', 'browser', 'workbench', this.serviceWorkerFileName);
+		return join(this.appRoot, 'out', 'vs', 'code', 'browser', 'workbench', this.serviceWorkerFileName);
 	}
 
 	public get proxyUri(): string {
@@ -330,7 +330,7 @@ export class EnvironmentServerService extends NativeEnvironmentService implement
 	}
 
 	public get callbackEndpoint(): string {
-		return join(this.appRoot, 'resources', 'web', 'callback.html');
+		return join(this.appRoot, 'out', 'vs', 'code', 'browser', 'workbench', 'callback.html');
 	}
 }
 

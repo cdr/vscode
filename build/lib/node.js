@@ -5,9 +5,7 @@
  *--------------------------------------------------------------------------------------------*/
 Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
-const fs = require("fs");
 const root = path.dirname(path.dirname(__dirname));
-const yarnrcPath = path.join(root, 'remote', '.yarnrc');
 // NOTE@coder: Fix version due to .yarnrc removal.
 const version = process.versions.node;
 const platform = process.platform;
