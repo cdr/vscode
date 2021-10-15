@@ -1,7 +1,7 @@
 {
   "name": "code-oss-dev",
-  "version": "1.61.0",
-  "distro": "86a7b6adcb03639551fca95a5932e91158738f34",
+  "version": "1.61.1",
+  "distro": "8ddbbea381ca2e82f9999e28e117b125df84e4c6",
   "author": {
     "name": "Microsoft Corporation"
   },
@@ -231,7 +231,7 @@
     "vscode-windows-registry": "1.0.3",
     "windows-foreground-love": "0.4.0",
     "windows-mutex": "0.4.1",
-    "windows-process-tree": "0.3.0"
+    "windows-process-tree": "^0.3.2"
   },
   "resolutions": {
     "elliptic": "^6.5.3",
