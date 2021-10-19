@@ -51,7 +51,7 @@ const vscodeServerResources = [
 	'out-build/vs/platform/environment/node/userDataPath.js',
 
 	// Workbench
-	'out-build/vs/code/browser/**/*',
+	'out-build/vs/code/browser/workbench/service-worker.js',
 	'out-build/vs/workbench/browser/media/*-theme.css',
 	'out-build/vs/workbench/contrib/debug/**/*.json',
 	'out-build/vs/workbench/contrib/externalTerminal/**/*.scpt',
