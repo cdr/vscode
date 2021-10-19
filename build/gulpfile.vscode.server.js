@@ -105,6 +105,7 @@ const optimizeVSCodeServerTask = task.define('optimize-vscode-server', task.seri
 		bundleInfo: undefined
 	})
 ));
+gulp.task(optimizeVSCodeServerTask);
 
 const sourceMappingURLBase = `https://ticino.blob.core.windows.net/sourcemaps/${commit}`;
 
