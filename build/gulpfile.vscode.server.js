@@ -65,9 +65,6 @@ const vscodeServerResources = [
 	// Webview
 	'out-build/vs/workbench/contrib/webview/browser/pre/*.js',
 
-	// Extension Worker
-	'out-build/vs/workbench/services/extensions/worker/extensionHostWorkerMain.js',
-
 	// Assets
 	'out-build/vs/**/*.{svg,png,html,jpg}',
 	'out-build/vs/**/markdown.css',
