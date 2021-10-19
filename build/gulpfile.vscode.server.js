@@ -107,12 +107,10 @@ const optimizeVSCodeServerTask = task.define('optimize-vscode-server', task.seri
 ));
 gulp.task(optimizeVSCodeServerTask);
 
-const sourceMappingURLBase = `https://ticino.blob.core.windows.net/sourcemaps/${commit}`;
-
 const minifyVSCodeServerTask = task.define('minify-vscode-server', task.series(
 	optimizeVSCodeServerTask,
 	util.rimraf('out-vscode-server-min'),
-	common.minifyTask('out-vscode-server', `${sourceMappingURLBase}/core`)
+	common.minifyTask('out-vscode-server')
 ));
 gulp.task(minifyVSCodeServerTask);
 
@@ -189,7 +187,7 @@ function packageTask(sourceFolderName, destinationFolderName) {
 			.pipe(filter(['**', '!**/package-lock.json', '!**/yarn.lock', '!**/*.js.map']))
 			.pipe(util.cleanNodeModules(path.join(__dirname, '.moduleignore')))
 			.pipe(jsFilter)
-			.pipe(util.rewriteSourceMappingURL(sourceMappingURLBase))
+			// .pipe(util.rewriteSourceMappingURL(sourceMappingURLBase))
 			.pipe(jsFilter.restore)
 			.pipe(createAsar(path.join(process.cwd(), 'node_modules'), [
 				'**/*.node',
