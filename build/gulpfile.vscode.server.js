@@ -30,6 +30,11 @@ const REPO_ROOT = path.dirname(__dirname);
 const commit = util.getVersion(REPO_ROOT);
 const BUILD_ROOT = path.dirname(REPO_ROOT);
 
+// Put files here that need to be packaged that are not already in the entry
+// points or included by the entry points.  The optimize step bundles code into
+// each entry point that imports it but more interestingly adding files here
+// that would normally get bundled causes the bundling to fail resulting in
+// "multiple top-level define" errors from the loader.
 const vscodeServerResources = [
 	// Bootstrap
 	'out-build/main.js',
