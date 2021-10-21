@@ -34,7 +34,7 @@ declare global {
 		 * @deprecated This should be removed when code-server merges with lib/vscode
 		 */
 		export interface IMainCli {
-			main: (argv: NativeParsedArgs) => Promise<void>;
+			main: (argv: NodeJS.Process['argv']) => Promise<void>;
 		}
 
 		/**

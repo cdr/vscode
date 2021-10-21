@@ -23,7 +23,7 @@ import { createWaitMarkerFile } from 'vs/platform/environment/node/wait';
 import product from 'vs/platform/product/common/product';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
 
-function shouldSpawnCliProcess(argv: NativeParsedArgs): boolean {
+export function shouldSpawnCliProcess(argv: NativeParsedArgs): boolean {
 	return !!argv['install-source']
 		|| !!argv['list-extensions']
 		|| !!argv['install-extension']
@@ -433,9 +433,14 @@ function eventuallyExit(code: number): void {
 	setTimeout(() => process.exit(code), 0);
 }
 
-main(process.argv)
-	.then(() => eventuallyExit(0))
-	.then(null, err => {
-		console.error(err.message || err.stack || err);
-		eventuallyExit(1);
-	});
+/**
+ * @coder Added so that code-server can invoke `main`.
+ */
+export async function initialize() {
+	return main(process.argv)
+		.then(() => eventuallyExit(0))
+		.then(null, err => {
+			console.error(err.message || err.stack || err);
+			eventuallyExit(1);
+		});
+}
