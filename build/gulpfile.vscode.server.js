@@ -49,11 +49,9 @@ const vscodeServerResources = [
 
 	// Base
 	'out-build/vs/base/**/*',
-	'out-build/vs/base/node/languagePacks.js',
-	'out-build/vs/base/node/{stdForkStart.js,terminateProcess.sh,cpuUsage.sh,ps.sh}',
-	'out-build/vs/base/browser/ui/codicons/codicon/**',
-	'out-build/vs/base/parts/sandbox/electron-browser/preload.js',
-	'out-build/vs/platform/environment/node/userDataPath.js',
+
+	// Platform
+	'out-build/vs/platform/**/*',
 
 	// Workbench
 	'out-build/vs/code/browser/workbench/service-worker.js',
