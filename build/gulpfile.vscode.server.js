@@ -48,7 +48,7 @@ const vscodeServerResources = [
 	'out-build/bootstrap-window.js',
 
 	// Base
-	'out-build/vs/base/**/*',
+	'out-build/vs/base/common/**/*',
 	'out-build/vs/base/node/languagePacks.js',
 	'out-build/vs/base/node/{stdForkStart.js,terminateProcess.sh,cpuUsage.sh,ps.sh}',
 	'out-build/vs/base/browser/ui/codicons/codicon/**',
