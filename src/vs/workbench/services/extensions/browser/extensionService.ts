@@ -29,7 +29,7 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IExtensionManifestPropertiesService } from 'vs/workbench/services/extensions/common/extensionManifestPropertiesService';
 import { IUserDataInitializationService } from 'vs/workbench/services/userData/browser/userDataInit';
 import { IAutomatedWindow } from 'vs/platform/log/browser/log';
-import { ILogService } from 'vs/platform/log/common/log';
+import { getLogLevel, ILogService, LogLevel } from 'vs/platform/log/common/log';
 import { IRemoteExplorerService } from 'vs/workbench/services/remote/common/remoteExplorerService';
 
 export class ExtensionService extends AbstractExtensionService implements IExtensionService {
@@ -103,7 +103,9 @@ export class ExtensionService extends AbstractExtensionService implements IExten
 					message = error.message;
 				}
 
-				this._logOrShowMessage(Severity.Ignore, nls.localize('link', "Failed to initialize remote Link authority: {0}", message || error));
+				if (getLogLevel(environmentService) === LogLevel.Debug) {
+					this._logOrShowMessage(Severity.Warning, nls.localize('link', "Failed to initialize remote Link authority: {0}", message || error));
+				}
 			}
 		});
 

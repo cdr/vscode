@@ -341,7 +341,16 @@ function updateAutoAttach(newState: State) {
 			updateStatusBar(context, oldState, true);
 		}
 
-		await transitions[newState](context);
+		/**
+		 * @coder Wrapped in try/catch as there seems to be an issue where
+		 * `clearAutoAttachVariables` is not defined on startup.
+		 */
+		try {
+			await transitions[newState](context);
+		} catch (error) {
+			console.debug(error);
+		}
+
 		isTemporarilyDisabled = false;
 		updateStatusBar(context, newState, false);
 		return { context, state: newState };
