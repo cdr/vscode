@@ -15,7 +15,8 @@ const ROOT = path.join(__dirname, '../../../');
 const shasum = crypto.createHash('sha1');
 
 shasum.update(fs.readFileSync(path.join(ROOT, 'build/.cachesalt')));
-shasum.update(fs.readFileSync(path.join(ROOT, '.yarnrc')));
+// NOTE@coder: Disabled due to .yarnrc removal.
+// shasum.update(fs.readFileSync(path.join(ROOT, '.yarnrc')));
 shasum.update(fs.readFileSync(path.join(ROOT, 'remote/.yarnrc')));
 
 // Add `package.json` and `yarn.lock` files
