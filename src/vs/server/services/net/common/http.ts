@@ -12,21 +12,6 @@ import { UriComponents } from 'vs/base/common/uri';
 import { ParsedRequest } from 'vs/server/services/net/abstractIncomingRequestService';
 import * as Handlebars from 'handlebars';
 import { IWorkbenchConfigurationSerialized } from 'vs/platform/workspaces/common/workbench';
-import { dirname } from 'vs/base/common/path';
-import { FileAccess } from 'vs/base/common/network';
-
-
-// TODO: Infer from environment service.
-export const APP_ROOT = dirname(FileAccess.asFileUri('', require).fsPath);
-export const WORKBENCH_PATH = path.join(APP_ROOT, 'vs', 'code', 'browser', 'workbench');
-export const SERVICE_WORKER_FILE_NAME = 'service-worker.js';
-
-export const AssetPaths = {
-	StaticBase: '/static',
-	ProxyUri: '/proxy/{port}',
-	Webview: path.join(APP_ROOT, 'vs', 'workbench', 'contrib', 'webview', 'browser', 'pre'),
-	ServiceWorker: path.join(APP_ROOT, 'vs', 'code', 'browser', 'workbench', SERVICE_WORKER_FILE_NAME),
-};
 
 /** Matching the given keys in `PollingURLCallbackProvider.QUERY_KEYS` */
 export const wellKnownKeys = [

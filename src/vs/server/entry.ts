@@ -48,7 +48,5 @@ export const main = async () => {
  * It should eventually be phased out and folded into VS Code's existing CLI flow.
  */
 export const createVSServer: CodeServerLib.CreateVSServer = async serverConfig => {
-	const codeServer = new ServerProcessMain(serverConfig);
-
-	return codeServer.startup({ listenWhenReady: false });
+	return new ServerProcessMain(serverConfig);
 };

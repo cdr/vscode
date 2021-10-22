@@ -89,14 +89,6 @@ import { REMOTE_FILE_SYSTEM_CHANNEL_NAME } from 'vs/workbench/services/remote/co
 import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentity';
 import { UriIdentityService } from 'vs/workbench/services/uriIdentity/common/uriIdentityService';
 
-interface IServerProcessMainStartupOptions {
-	listenWhenReady?: boolean;
-}
-
-interface IServerProcessMain {
-	startup(startupOptions: IServerProcessMainStartupOptions): Promise<NetServer>;
-}
-
 interface ServicesResult {
 	instantiationService: IInstantiationService;
 	logService: ILogService;
@@ -106,7 +98,7 @@ interface ServicesResult {
 /**
  * Handles client connections to a editor instance via IPC.
  */
-export class ServerProcessMain extends Disposable implements IServerProcessMain {
+export class ServerProcessMain extends Disposable implements CodeServerLib.IServerProcessMain {
 	private logPrefix = '[Code Server]';
 	netServer = createNetServer();
 
@@ -122,9 +114,10 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 
 	private registerListeners(): void {
 		process.once('exit', () => this.dispose());
+		process.once('disconnect', () => this.dispose());
 	}
 
-	public async startup(startupOptions: IServerProcessMainStartupOptions = { listenWhenReady: true }): Promise<NetServer> {
+	public async startup(startupOptions: CodeServerLib.IServerProcessMainStartupOptions = { listenWhenReady: true }): Promise<NetServer> {
 		// Services
 		const {
 			instantiationService,
@@ -160,7 +153,7 @@ export class ServerProcessMain extends Disposable implements IServerProcessMain 
 	// References:
 	// ../../electron-browser/sharedProcess/sharedProcessMain.ts#L148
 	// ../../../code/electron-main/app.ts
-	public async createServices(startupOptions: IServerProcessMainStartupOptions): Promise<ServicesResult> {
+	public async createServices(startupOptions: CodeServerLib.IServerProcessMainStartupOptions): Promise<ServicesResult> {
 		const services = new ServiceCollection();
 
 		// Product

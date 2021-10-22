@@ -3,12 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Server } from 'http';
 import type { NativeParsedArgs } from '../../../platform/environment/common/argv';
 import type { NLSConfiguration, InternalNLSConfiguration } from '../../../base/node/languagePacks';
+import type { Server as NetServer } from 'http';
 
 declare global {
 	namespace CodeServerLib {
+
+		export interface IServerProcessMainStartupOptions {
+			listenWhenReady?: boolean;
+		}
+		export interface IServerProcessMain {
+			startup(startupOptions: IServerProcessMainStartupOptions): Promise<NetServer>;
+			dispose(): void;
+		}
+
 		export interface StartPath {
 			url: string;
 			workspace: boolean;
@@ -27,7 +36,7 @@ declare global {
 		 * @deprecated This primarily exists to bridge the gap between code-server and lib/vscode
 		 */
 
-		export type CreateVSServer = (serverConfiguration: ServerConfiguration) => Promise<Server>;
+		export type CreateVSServer = (serverConfiguration: ServerConfiguration) => Promise<IServerProcessMain>;
 
 
 		/**
