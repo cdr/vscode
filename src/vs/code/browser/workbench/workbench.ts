@@ -41,7 +41,7 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
  * Encode a path for opening via the folder or workspace query parameter. This
  * preserves slashes so it can be edited by hand more easily.
  *
- * @remark coder
+ * @author coder
  */
 export const encodePath = (path: string): string => {
 	return path.split('/').map((p) => encodeURIComponent(p)).join('/');
@@ -329,7 +329,10 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		}
 
 		// Folder
-		// NOTE@coder: Modified to print as a human-readable string for file paths.
+		/**
+		 * Modified to print as a human-readable string for file paths.
+		 * @author coder
+		 */
 		else if (isFolderToOpen(workspace)) {
 			const target = workspace.folderUri.scheme === Schemas.vscodeRemote
 				? encodePath(workspace.folderUri.path)
@@ -338,7 +341,10 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		}
 
 		// Workspace
-		// NOTE@coder: Modified to print as a human-readable string for file paths.
+		/**
+		 * Modified to print as a human-readable string for file paths.
+		 * @author coder
+		 */
 		else if (isWorkspaceToOpen(workspace)) {
 			const target = workspace.workspaceUri.scheme === Schemas.vscodeRemote
 				? encodePath(workspace.workspaceUri.path)
@@ -441,8 +447,12 @@ class WindowIndicator implements IWindowIndicator {
 	let payload = Object.create(null);
 	let logLevel: string | undefined = undefined;
 
-	// NOTE@coder: If the value begins with a slash assume it is a file path and
-	// convert it to use the vscode-remote scheme.
+	/**
+	 * If the value begins with a slash assume it is a file path and convert it to
+	 * use the vscode-remote scheme.
+	 *
+	 * @author coder
+	 */
 	const toRemote = (value: string): string => {
 		if (value.startsWith("/")) {
 			return "vscode-remote://" + value;
@@ -455,14 +465,24 @@ class WindowIndicator implements IWindowIndicator {
 		switch (key) {
 			// Folder
 			case WorkspaceProvider.QUERY_PARAM_FOLDER:
-				value = toRemote(value); // NOTE@coder: See above.
+				/**
+				 * Handle URIs that we previously left unencoded and de-schemed.
+				 *
+				 * @author coder
+				 */
+				value = toRemote(value);
 				workspace = { folderUri: URI.parse(value) };
 				foundWorkspace = true;
 				break;
 
 			// Workspace
 			case WorkspaceProvider.QUERY_PARAM_WORKSPACE:
-				value = toRemote(value); // NOTE@coder: See above.
+				/**
+				 * Handle URIs that we previously left unencoded and de-schemed.
+				 *
+				 * @author coder
+				 */
+				value = toRemote(value);
 				workspace = { workspaceUri: URI.parse(value) };
 				foundWorkspace = true;
 				break;
