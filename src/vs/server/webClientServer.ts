@@ -103,6 +103,10 @@ export class WebClientServer {
 				return serveFile(this._logService, req, res, join(APP_ROOT, 'resources', 'server', parsedPath.base));
 			}
 
+			if (parsedPath.dir.includes('/webview/') && parsedPath.ext) {
+				return this._handleWebview(req, res, parsedUrl);
+			}
+
 			if (parsedPath.base === this._environmentService.serviceWorkerFileName) {
 				return serveFile(this._logService, req, res, this._environmentService.serviceWorkerPath, {
 					'Service-Worker-Allowed': pathPrefix,
@@ -241,6 +245,28 @@ export class WebClientServer {
 	}
 
 	/**
+	 * Handle HTTP requests for /webview/*
+	 *
+	 * A unique path is required for every webview service worker.
+	 */
+	private async _handleWebview(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
+		const headers: Record<string, string> = Object.create(null);
+
+		// support paths that are uri-encoded (e.g. spaces => %20)
+		const normalizedPathname = decodeURIComponent(parsedUrl.pathname!);
+
+		// Strip `/webview/{uuid}` from the path.
+		const relativeFilePath = normalize(normalizedPathname.split('/').splice(3).join('/'));
+
+		const filePath = join(APP_ROOT, 'out/vs/workbench/contrib/webview/browser/pre', relativeFilePath);
+		if (!isEqualOrParent(filePath, APP_ROOT, !isLinux)) {
+			return this.serveError(req, res, 400, `Bad request.`, parsedUrl);
+		}
+
+		return serveFile(this._logService, req, res, filePath, headers);
+	}
+
+	/**
 	 * Handle HTTP requests for /
 	 */
 	private async _handleRoot(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
@@ -318,6 +344,7 @@ export class WebClientServer {
 					logoutEndpointUrl: this.createRequestUrl(req, parsedUrl, '/logout').toString(),
 					webEndpointUrl: this.createRequestUrl(req, parsedUrl, '/static').toString(),
 					webEndpointUrlTemplate: this.createRequestUrl(req, parsedUrl, '/static').toString(),
+					webviewContentExternalBaseUrlTemplate: './webview/{{uuid}}/',
 
 					updateUrl: this.createRequestUrl(req, parsedUrl, '/update/check').toString(),
 				},
@@ -343,7 +370,7 @@ export class WebClientServer {
 			// the sha is the same as in src/vs/workbench/services/extensions/worker/httpWebWorkerExtensionHostIframe.html
 			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-cb2sg39EJV8ABaSNFfWu/ou8o1xVXYK7jp90oZ9vpcg=';`,
 			'child-src \'self\';',
-			`frame-src 'self' https://*.vscode-webview.net ${this._productService.webEndpointUrl || ''} data:;`,
+			`frame-src 'self' ${this._productService.webEndpointUrl || ''} data:;`,
 			'worker-src \'self\' data:;',
 			'style-src \'self\' \'unsafe-inline\';',
 			'connect-src \'self\' ws: wss: https:;',
