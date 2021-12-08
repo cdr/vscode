@@ -6,7 +6,7 @@
 		"sourceMap": false,
 		"outDir": "../out/vs",
 		"target": "es6",
-		"lib": ["es2020"],
+		"lib": ["es2020", "dom"],
 		"types": [
 			"keytar",
 			"mocha",
