@@ -338,7 +338,6 @@ export class WebClientServer {
 					webEndpointUrl: vscodeBase + '/static',
 					webEndpointUrlTemplate: vscodeBase + '/static',
 					webviewContentExternalBaseUrlTemplate: vscodeBase + '/webview/{{uuid}}/',
-
 					updateUrl: base + '/update/check'
 				},
 				folderUri: (workspacePath && isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
@@ -351,6 +350,7 @@ export class WebClientServer {
 					logLevel: this._logService.getLevel(),
 				},
 				ignoreLastOpened: this._environmentService.ignoreLastOpened,
+				userDataPath: this._environmentService.userDataPath,
 				settingsSyncOptions: !this._environmentService.isBuilt && this._environmentService.args['enable-sync'] ? { enabled: true } : undefined,
 			})))
 			.replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => backgroundColor)
