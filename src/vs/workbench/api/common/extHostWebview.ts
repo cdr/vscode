@@ -86,7 +86,7 @@ export class ExtHostWebview implements vscode.Webview {
 			return extensionCspRule + ' ' + webviewGenericCspSource;
 		}
 		/**
-		 * When not using a CDN the images load from self.
+		 * When not using a CDN content loads from self.
 		 * @author coder
 		 */
 		return `'self' ` + webviewGenericCspSource;
