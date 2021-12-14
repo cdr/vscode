@@ -212,6 +212,12 @@ class Preview extends Disposable {
 		const nonce = getNonce();
 
 		const cspSource = this.webviewEditor.webview.cspSource;
+		/**
+		 * Add self to img-src so images can load.  In Codespaces when the extension
+		 * is served from a CDN it adds that CDN to the CSP which makes this work
+		 * but for self-hosted instances we need self.
+		 * @author coder
+		 */
 		return /* html */`<!DOCTYPE html>
 <html lang="en">
 <head>
