@@ -212,12 +212,6 @@ class Preview extends Disposable {
 		const nonce = getNonce();
 
 		const cspSource = this.webviewEditor.webview.cspSource;
-		/**
-		 * Add self to img-src so images can load.  In Codespaces when the extension
-		 * is served from a CDN it adds that CDN to the CSP which makes this work
-		 * but for self-hosted instances we need self.
-		 * @author coder
-		 */
 		return /* html */`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -231,7 +225,7 @@ class Preview extends Disposable {
 
 	<link rel="stylesheet" href="${escapeAttribute(this.extensionResource('/media/main.css'))}" type="text/css" media="screen" nonce="${nonce}">
 
-	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: ${cspSource}; script-src 'nonce-${nonce}'; style-src ${cspSource} 'nonce-${nonce}';">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: ${cspSource}; script-src 'nonce-${nonce}'; style-src ${cspSource} 'nonce-${nonce}';">
 	<meta id="image-preview-settings" data-settings="${escapeAttribute(JSON.stringify(settings))}">
 </head>
 <body class="container image scale-to-fit loading">
