@@ -48,3 +48,22 @@ export async function getProxyAgent(rawRequestURL: string, env: typeof process.e
 		? new (await import('http-proxy-agent'))(opts as any as Url)
 		: new (await import('https-proxy-agent'))(opts);
 }
+
+/**
+ * Patch the node http and https modules to route all requests through the agent
+ * we get from the proxy-agent package if a proxy is set in the environment.
+ *
+ * @author coder
+ */
+export async function monkeyPatchHttpAgent(): Promise<void> {
+	if (process.env.http_proxy || process.env.https_proxy || process.env.HTTP_PROXY || process.env.HTTPS_PROXY) {
+		const http = require('http')
+		const https = require('https')
+
+		// If we do not pass in a proxy URL, proxy-agent will get the URL from the
+		// environment.  See https://www.npmjs.com/package/proxy-from-env.
+		const pa = new (await import('proxy-agent'))();
+		http.globalAgent = pa;
+		https.globalAgent = pa;
+	}
+}
