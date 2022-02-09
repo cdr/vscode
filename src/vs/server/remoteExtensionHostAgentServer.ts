@@ -520,6 +520,8 @@ export class RemoteExtensionHostAgentServer extends Disposable {
 			}
 		}
 
+		this._logService.info("something something in remote extension host")
+
 		socket.write(responseHeaders.join('\r\n') + '\r\n\r\n');
 
 		// Never timeout this socket due to inactivity!

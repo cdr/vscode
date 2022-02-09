@@ -21,6 +21,7 @@ import { IServerEnvironmentService } from 'vs/server/serverEnvironmentService';
 import { IProcessEnvironment, isWindows } from 'vs/base/common/platform';
 import { logRemoteEntry } from 'vs/workbench/services/extensions/common/remoteConsoleUtil';
 import { removeDangerousEnvVariables } from 'vs/base/node/processes';
+import { SocketProxyProvider } from './socket';
 
 export async function buildUserEnvironment(startParamsEnv: { [key: string]: string | null } = {}, language: string, isDebug: boolean, environmentService: IServerEnvironmentService, logService: ILogService): Promise<IProcessEnvironment> {
 	const nlsConfig = await getNLSConfiguration(language, environmentService.userDataPath);
@@ -113,6 +114,7 @@ export class ExtensionHostConnection {
 		this._connectionData.socket.pause();
 
 		this._log(`New connection established.`);
+		this._log(`whats up`);
 	}
 
 	private get _logPrefix(): string {
@@ -136,10 +138,18 @@ export class ExtensionHostConnection {
 	}
 
 	private async _sendSocketToExtensionHost(extensionHostProcess: cp.ChildProcess, connectionData: ConnectionData): Promise<void> {
+		this._log("before the socket drain")
 		// Make sure all outstanding writes have been drained before sending the socket
 		await connectionData.socketDrain;
+		// NOTE@jsjoeio - we got here and realized this never completes above 
+		// so we never got here
+		this._log("after the socket drain")
 		const msg = connectionData.toIExtHostSocketMessage();
-		extensionHostProcess.send(msg, connectionData.socket);
+		// TODO@jsjoeio - create SocketProxyProvider
+		const spp = new SocketProxyProvider()
+		this._log("yhoooolho")
+		const wrappedSocket = await spp.createProxy(connectionData.socket)
+		extensionHostProcess.send(msg, wrappedSocket);
 	}
 
 	public shortenReconnectionGraceTimeIfNecessary(): void {
@@ -239,6 +249,8 @@ export class ExtensionHostConnection {
 			});
 
 			const messageListener = (msg: IExtHostReadyMessage) => {
+				this._log(`messageListener function called`)
+				this._log(`msg: ${JSON.stringify(msg)}`)
 				if (msg.type === 'VSCODE_EXTHOST_IPC_READY') {
 					this._extensionHostProcess!.removeListener('message', messageListener);
 					this._sendSocketToExtensionHost(this._extensionHostProcess!, this._connectionData!);
