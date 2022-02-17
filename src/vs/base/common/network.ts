@@ -131,7 +131,6 @@ class RemoteAuthoritiesImpl {
 		this._connectionTokens[authority] = connectionToken;
 	}
 
-<<<<<<< HEAD
 	@memoize
 	/** @coder Added this to work against a relative path. */
 	get remoteResourcePath(): string {
@@ -143,10 +142,10 @@ class RemoteAuthoritiesImpl {
 		}
 
 		return `/${Schemas.vscodeRemoteResource}`;
-=======
+	}
+
 	getPreferredWebSchema(): 'http' | 'https' {
 		return this._preferredWebSchema;
->>>>>>> upstream/release/1.64
 	}
 
 	rewrite(uri: URI): URI {
