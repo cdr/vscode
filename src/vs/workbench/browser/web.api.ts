@@ -78,6 +78,14 @@ export interface IWorkbench {
 }
 
 export interface IWorkbenchConstructionOptions {
+	//#region @coder
+
+	/**
+	 * Path to the user data directory.
+	 */
+	readonly userDataPath?: string
+
+	//#endregion
 
 	//#region Connection related configuration
 
@@ -599,28 +607,7 @@ export interface ISettingsSyncOptions {
 	enablementHandler?(enablement: boolean): void;
 }
 
-<<<<<<< HEAD:src/vs/workbench/workbench.web.api.ts
-interface IWorkbenchConstructionOptions {
-	//#region @coder
-
-	/**
-	 * Path to the user data directory.
-	 */
-	readonly userDataPath?: string
-
-	//#endregion
-
-
-	//#region Connection related configuration
-
-	/**
-	 * The remote authority is the IP:PORT from where the workbench is served
-	 * from. It is for example being used for the websocket connections as address.
-	 */
-	readonly remoteAuthority?: string;
-=======
 export interface IDevelopmentOptions {
->>>>>>> upstream/release/1.64:src/vs/workbench/browser/web.api.ts
 
 	/**
 	 * Current logging level. Default is `LogLevel.Info`.
