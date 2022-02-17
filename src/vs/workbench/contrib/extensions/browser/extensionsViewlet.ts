@@ -216,18 +216,13 @@ export class ExtensionsViewletViewsContribution implements IWorkbenchContributio
 		viewDescriptors.push({
 			id: 'extensions.recommendedList',
 			name: localize('recommendedExtensions', "Recommended"),
-<<<<<<< HEAD
-			ctorDescriptor: new SyncDescriptor(DefaultRecommendedExtensionsView, [{}]),
+			ctorDescriptor: new SyncDescriptor(DefaultRecommendedExtensionsView, [{ flexibleHeight: true}]),
 			when: ContextKeyExpr.and(
 				DefaultViewsContext,
 				ContextKeyExpr.not('config.extensions.showRecommendationsOnlyOnDemand'),
 				/** @coder Open VSX doesn't yet support `recommendationsUrl`, so we hide the pane. */
-				ContextKeyExpr.has(ExtensionsViewletViewsContribution.EXTENSION_RECOMMENDATION_KEY)				
+				ContextKeyExpr.has(ExtensionsViewletViewsContribution.EXTENSION_RECOMMENDATION_KEY)
 			),
-=======
-			ctorDescriptor: new SyncDescriptor(DefaultRecommendedExtensionsView, [{ flexibleHeight: true }]),
-			when: ContextKeyExpr.and(DefaultViewsContext, ContextKeyExpr.not('config.extensions.showRecommendationsOnlyOnDemand')),
->>>>>>> upstream/release/1.64
 			weight: 40,
 			order: 3,
 			canToggleVisibility: true
@@ -491,19 +486,6 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer implements IE
 		this.recommendedExtensionsContextKey = RecommendedExtensionsContext.bindTo(contextKeyService);
 		this._register(this.paneCompositeService.onDidPaneCompositeOpen(e => { if (e.viewContainerLocation === ViewContainerLocation.Sidebar) { this.onViewletOpen(e.composite); } }, this));
 		this.searchViewletState = this.getMemento(StorageScope.WORKSPACE, StorageTarget.USER);
-<<<<<<< HEAD
-		
-		if (extensionManagementServerService.webExtensionManagementServer) {
-			this._register(extensionsWorkbenchService.onChange(() => {
-				// show installed web extensions view only when it is not visible
-				// Do not hide the view automatically when it is visible
-				if (!this.hasInstalledWebExtensionsContextKey.get()) {
-					this.updateInstalledWebExtensionsContext();
-				}
-			}));
-		}
-=======
->>>>>>> upstream/release/1.64
 	}
 
 		/** @coder Added to clarify source of marketplace extensions. */
@@ -512,10 +494,10 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer implements IE
 			if (this._productService.extensionsGallery?.serviceUrl) {
 				return new URL(this._productService.extensionsGallery?.serviceUrl).hostname;
 			}
-	
+
 			return 'Marketplace';
 		}
-	
+
 
 	get searchValue(): string | undefined {
 		return this.searchBox?.getValue();
