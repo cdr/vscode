@@ -14,7 +14,7 @@ import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/commo
 import { ILogService } from 'vs/platform/log/common/log';
 import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
-import type { IProductConfiguration } from 'vs/workbench/workbench.web.api';
+import type { IProductConfiguration } from 'vs/workbench/workbench.web.main';
 
 /**
  * @file All client-side customization to VS Code should live in this file when
@@ -29,6 +29,7 @@ export class CodeServerClientAdditions extends Disposable {
 	static LOGOUT_COMMAND_ID = 'code-server.logout';
 	static AUTH_KEY = 'code-server.authed';
 	productConfiguration: Partial<IProductConfiguration>;
+	ctor: any;
 
 	private sourceIsTrustedServiceWorker = (source: string): boolean => {
 		return this.productConfiguration.serviceWorker?.url === source;
@@ -45,7 +46,7 @@ export class CodeServerClientAdditions extends Disposable {
 	});
 
 
-	constructor (
+	constructor(
 		productConfiguration: Partial<IProductConfiguration>,
 		@ILogService private logService: ILogService,
 		@INotificationService private notificationService: INotificationService,

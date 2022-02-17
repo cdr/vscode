@@ -67,12 +67,9 @@ import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { mixin, safeStringify } from 'vs/base/common/objects';
 import { ICredentialsService } from 'vs/platform/credentials/common/credentials';
 import { IndexedDB } from 'vs/base/browser/indexedDB';
-<<<<<<< HEAD
 import { CodeServerClientAdditions } from 'vs/workbench/browser/client';
-=======
 import { BrowserCredentialsService } from 'vs/workbench/services/credentials/browser/credentialsService';
 import { IWorkspace } from 'vs/workbench/services/host/browser/browserHostService';
->>>>>>> upstream/release/1.64
 
 export class BrowserMain extends Disposable {
 
@@ -189,17 +186,12 @@ export class BrowserMain extends Disposable {
 		serviceCollection.set(ILogService, logService);
 
 		// Remote
-<<<<<<< HEAD
-		const connectionToken = environmentService.options.connectionToken || getCookieValue('vscode-tkn');
+		const connectionToken = environmentService.options.connectionToken || getCookieValue(connectionTokenCookieName);
 		/**
 		 * Add proxy URL template to the resolver.
 		 * @author coder
 		 */
 		const remoteAuthorityResolverService = new RemoteAuthorityResolverService(connectionToken, this.configuration.resourceUriProvider, this.configuration.productConfiguration?.proxyEndpointUrlTemplate);
-=======
-		const connectionToken = environmentService.options.connectionToken || getCookieValue(connectionTokenCookieName);
-		const remoteAuthorityResolverService = new RemoteAuthorityResolverService(connectionToken, this.configuration.resourceUriProvider);
->>>>>>> upstream/release/1.64
 		serviceCollection.set(IRemoteAuthorityResolverService, remoteAuthorityResolverService);
 
 		// Signing
