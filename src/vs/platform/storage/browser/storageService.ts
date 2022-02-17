@@ -13,6 +13,7 @@ import { InMemoryStorageDatabase, isStorageItemsChangeEvent, IStorage, IStorageD
 import { ILogService } from 'vs/platform/log/common/log';
 import { AbstractStorageService, IS_NEW_KEY, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { IWorkspaceInitializationPayload } from 'vs/platform/workspaces/common/workspaces';
+import { hash } from 'vs/base/common/hash';
 
 export class BrowserStorageService extends AbstractStorageService {
 
@@ -214,7 +215,14 @@ export class IndexedDBStorageDatabase extends Disposable implements IIndexedDBSt
 	) {
 		super();
 
-		this.name = `${IndexedDBStorageDatabase.STORAGE_DATABASE_PREFIX}${options.id}`;
+		/**
+		 * Add a unique ID based on the current path.  This prevents workspaces on
+		 * different machines that share the same domain and file path from
+		 * colliding (since it does not appear IndexedDB can be scoped to a path) as
+		 * long as they are hosted on different paths.
+		 */
+		const windowId = hash(location.pathname.toString()).toString(16);
+		this.name = `${IndexedDBStorageDatabase.STORAGE_DATABASE_PREFIX}${windowId}-${options.id}`;
 		this.broadcastChannel = options.broadcastChanges && ('BroadcastChannel' in window) ? new BroadcastChannel(IndexedDBStorageDatabase.STORAGE_BROADCAST_CHANNEL) : undefined;
 
 		this.whenConnected = this.connect();
