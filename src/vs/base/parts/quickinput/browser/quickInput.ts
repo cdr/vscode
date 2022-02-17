@@ -413,12 +413,12 @@ class QuickInput extends Disposable implements IQuickInput {
 			this.ui.message.style.color = styles.foreground ? `${styles.foreground}` : '';
 			this.ui.message.style.backgroundColor = styles.background ? `${styles.background}` : '';
 			this.ui.message.style.border = styles.border ? `1px solid ${styles.border}` : '';
-			this.ui.message.style.paddingBottom = '4px';
+			this.ui.message.style.marginBottom = '-2px';
 		} else {
 			this.ui.message.style.color = '';
 			this.ui.message.style.backgroundColor = '';
 			this.ui.message.style.border = '';
-			this.ui.message.style.paddingBottom = '';
+			this.ui.message.style.marginBottom = '';
 		}
 	}
 
@@ -487,13 +487,20 @@ class QuickPick<T extends IQuickPickItem> extends QuickInput implements IQuickPi
 	}
 
 	set value(value: string) {
+		this.doSetValue(value);
+	}
+
+	private doSetValue(value: string, skipUpdate?: boolean): void {
 		if (this._value !== value) {
-			this._value = value || '';
-			this.update();
-			// TODO: Remove this duplicate code and have the updating of the input box handle this.
-			const didFilter = this.ui.list.filter(this.filterValue(this.ui.inputBox.value));
-			if (didFilter) {
-				this.trySelectFirst();
+			this._value = value;
+			if (!skipUpdate) {
+				this.update();
+			}
+			if (this.visible) {
+				const didFilter = this.ui.list.filter(this.filterValue(this._value));
+				if (didFilter) {
+					this.trySelectFirst();
+				}
 			}
 			this.onDidChangeValueEmitter.fire(this._value);
 		}
@@ -739,15 +746,7 @@ class QuickPick<T extends IQuickPickItem> extends QuickInput implements IQuickPi
 		if (!this.visible) {
 			this.visibleDisposables.add(
 				this.ui.inputBox.onDidChange(value => {
-					if (value === this.value) {
-						return;
-					}
-					this._value = value;
-					const didFilter = this.ui.list.filter(this.filterValue(this.ui.inputBox.value));
-					if (didFilter) {
-						this.trySelectFirst();
-					}
-					this.onDidChangeValueEmitter.fire(value);
+					this.doSetValue(value, true /* skip update since this originates from the UI */);
 				}));
 			this.visibleDisposables.add(this.ui.inputBox.onMouseDown(event => {
 				if (!this.autoFocusOnList) {
@@ -1061,6 +1060,7 @@ class QuickPick<T extends IQuickPickItem> extends QuickInput implements IQuickPi
 }
 
 class InputBox extends QuickInput implements IInputBox {
+	private _value = '';
 	private _valueSelection: Readonly<[number, number]> | undefined;
 	private valueSelectionUpdated = true;
 	private _placeholder: string | undefined;
@@ -1070,11 +1070,12 @@ class InputBox extends QuickInput implements IInputBox {
 	private readonly onDidAcceptEmitter = this._register(new Emitter<void>());
 
 	get value() {
-		return this.ui.inputBox.value;
+		return this._value;
 	}
 
 	set value(value: string) {
-		this.ui.inputBox.value = value ?? '';
+		this._value = value || '';
+		this.update();
 	}
 
 	set valueSelection(valueSelection: Readonly<[number, number]>) {
@@ -1121,6 +1122,10 @@ class InputBox extends QuickInput implements IInputBox {
 		if (!this.visible) {
 			this.visibleDisposables.add(
 				this.ui.inputBox.onDidChange(value => {
+					if (value === this.value) {
+						return;
+					}
+					this._value = value;
 					this.onDidValueChangeEmitter.fire(value);
 				}));
 			this.visibleDisposables.add(this.ui.onDidAccept(() => this.onDidAcceptEmitter.fire()));
@@ -1140,6 +1145,9 @@ class InputBox extends QuickInput implements IInputBox {
 		};
 		this.ui.setVisibilities(visibilities);
 		super.update();
+		if (this.ui.inputBox.value !== this.value) {
+			this.ui.inputBox.value = this.value;
+		}
 		if (this.valueSelectionUpdated) {
 			this.valueSelectionUpdated = false;
 			this.ui.inputBox.select(this._valueSelection && { start: this._valueSelection[0], end: this._valueSelection[1] });

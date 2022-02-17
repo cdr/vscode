@@ -104,6 +104,9 @@ export namespace Schemas {
 	export const vsls = 'vsls';
 }
 
+export const connectionTokenCookieName = 'vscode-tkn';
+export const connectionTokenQueryName = 'tkn';
+
 class RemoteAuthoritiesImpl {
 	private readonly _hosts: { [authority: string]: string | undefined; } = Object.create(null);
 	private readonly _ports: { [authority: string]: number | undefined; } = Object.create(null);
@@ -128,6 +131,7 @@ class RemoteAuthoritiesImpl {
 		this._connectionTokens[authority] = connectionToken;
 	}
 
+<<<<<<< HEAD
 	@memoize
 	/** @coder Added this to work against a relative path. */
 	get remoteResourcePath(): string {
@@ -139,6 +143,10 @@ class RemoteAuthoritiesImpl {
 		}
 
 		return `/${Schemas.vscodeRemoteResource}`;
+=======
+	getPreferredWebSchema(): 'http' | 'https' {
+		return this._preferredWebSchema;
+>>>>>>> upstream/release/1.64
 	}
 
 	rewrite(uri: URI): URI {
@@ -154,7 +162,7 @@ class RemoteAuthoritiesImpl {
 		const connectionToken = this._connectionTokens[authority];
 		let query = `path=${encodeURIComponent(uri.path)}`;
 		if (typeof connectionToken === 'string') {
-			query += `&tkn=${encodeURIComponent(connectionToken)}`;
+			query += `&${connectionTokenQueryName}=${encodeURIComponent(connectionToken)}`;
 		}
 
 		return URI.from({

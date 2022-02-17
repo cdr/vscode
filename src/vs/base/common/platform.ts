@@ -11,6 +11,7 @@ let _isLinux = false;
 let _isLinuxSnap = false;
 let _isNative = false;
 let _isWeb = false;
+let _isElectron = false;
 let _isIOS = false;
 let _locale: string | undefined = undefined;
 let _language: string = LANGUAGE_DEFAULT;
@@ -61,7 +62,8 @@ if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.process !== '
 	nodeProcess = process;
 }
 
-const isElectronRenderer = typeof nodeProcess?.versions?.electron === 'string' && nodeProcess.type === 'renderer';
+const isElectronProcess = typeof nodeProcess?.versions?.electron === 'string';
+const isElectronRenderer = isElectronProcess && nodeProcess?.type === 'renderer';
 export const isElectronSandboxed = isElectronRenderer && nodeProcess?.sandboxed;
 
 interface INavigator {
@@ -105,6 +107,7 @@ else if (typeof nodeProcess === 'object') {
 	_isMacintosh = (nodeProcess.platform === 'darwin');
 	_isLinux = (nodeProcess.platform === 'linux');
 	_isLinuxSnap = _isLinux && !!nodeProcess.env['SNAP'] && !!nodeProcess.env['SNAP_REVISION'];
+	_isElectron = isElectronProcess;
 	_locale = LANGUAGE_DEFAULT;
 	_language = LANGUAGE_DEFAULT;
 	const rawNlsConfig = nodeProcess.env['VSCODE_NLS_CONFIG'];
@@ -156,6 +159,7 @@ export const isMacintosh = _isMacintosh;
 export const isLinux = _isLinux;
 export const isLinuxSnap = _isLinuxSnap;
 export const isNative = _isNative;
+export const isElectron = _isElectron;
 export const isWeb = _isWeb;
 export const isIOS = _isIOS;
 export const platform = _platform;
@@ -259,3 +263,9 @@ export function isLittleEndian(): boolean {
 	}
 	return _isLittleEndian;
 }
+
+export const isChrome = !!(userAgent && userAgent.indexOf('Chrome') >= 0);
+export const isFirefox = !!(userAgent && userAgent.indexOf('Firefox') >= 0);
+export const isSafari = !!(!isChrome && (userAgent && userAgent.indexOf('Safari') >= 0));
+export const isEdge = !!(userAgent && userAgent.indexOf('Edg/') >= 0);
+export const isAndroid = !!(userAgent && userAgent.indexOf('Android') >= 0);

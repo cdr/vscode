@@ -27,12 +27,18 @@
 		<meta id="vscode-remote-nls-configuration" data-settings="{{NLS_CONFIGURATION}}">
 
 		<!-- Workbench Icon/Manifest/CSS -->
+<<<<<<< HEAD
 		<link rel="icon" href="{{BASE}}/static/resources/server/favicon-dark-support.svg" type="image/svg+xml" />
 		<link rel="alternate icon" href="{{BASE}}/static/resources/server/favicon.svg" type="image/svg+xml" />
 
 		<link rel="icon" href="{{BASE}}/favicon.ico" type="image/x-icon" />
 		<link rel="manifest" href="{{BASE}}/manifest.json" crossorigin="use-credentials">
 		<meta name="theme-color" content="{{CLIENT_BACKGROUND_COLOR}}">
+=======
+		<link rel="icon" href="/favicon.ico" type="image/x-icon" />
+		<link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+		<link data-name="vs/workbench/workbench.web.main" rel="stylesheet" href="./static/out/vs/workbench/workbench.web.main.css">
+>>>>>>> upstream/release/1.64
 
 		<link data-name="vs/workbench/workbench.web.api" rel="stylesheet" href="{{BASE}}/static/out/vs/workbench/workbench.web.api.css">
 	</head>
@@ -88,7 +94,13 @@
 	<script>
 		performance.mark('code/willLoadWorkbenchMain');
 	</script>
+<<<<<<< HEAD
 	<script src="{{BASE}}/static/out/vs/workbench/workbench.web.api.nls.js"></script>
 	<script src="{{BASE}}/static/out/vs/workbench/workbench.web.api.js"></script>
 	<script src="{{BASE}}/static/out/vs/code/browser/workbench/workbench.js"></script>
+=======
+	<script src="./static/out/vs/workbench/workbench.web.main.nls.js"></script>
+	<script src="./static/out/vs/workbench/workbench.web.main.js"></script>
+	<script src="./static/out/vs/code/browser/workbench/workbench.js"></script>
+>>>>>>> upstream/release/1.64
 </html>

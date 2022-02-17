@@ -6,7 +6,7 @@
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { Event } from 'vs/base/common/event';
 import { IPager } from 'vs/base/common/paging';
-import { IQueryOptions, ILocalExtension, IGalleryExtension, IExtensionIdentifier, InstallOptions } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { IQueryOptions, ILocalExtension, IGalleryExtension, IExtensionIdentifier, InstallOptions, InstallVSIXOptions, IExtensionInfo, IExtensionQueryOptions } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { EnablementState, IExtensionManagementServer } from 'vs/workbench/services/extensionManagement/common/extensionManagement';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { Disposable } from 'vs/base/common/lifecycle';
@@ -50,6 +50,7 @@ export interface IExtension {
 	readonly version: string;
 	readonly latestVersion: string;
 	readonly hasPreReleaseVersion: boolean;
+	readonly hasReleaseVersion: boolean;
 	readonly description: string;
 	readonly url?: string;
 	readonly repository?: string;
@@ -67,15 +68,16 @@ export interface IExtension {
 	readonly extensionPack: string[];
 	readonly telemetryData: any;
 	readonly preview: boolean;
-	getManifest(preRelease: boolean, token: CancellationToken): Promise<IExtensionManifest | null>;
+	getManifest(token: CancellationToken): Promise<IExtensionManifest | null>;
 	hasReadme(): boolean;
-	getReadme(preRelease: boolean, token: CancellationToken): Promise<string>;
+	getReadme(token: CancellationToken): Promise<string>;
 	hasChangelog(): boolean;
-	getChangelog(preRelease: boolean, token: CancellationToken): Promise<string>;
+	getChangelog(token: CancellationToken): Promise<string>;
 	readonly server?: IExtensionManagementServer;
 	readonly local?: ILocalExtension;
 	gallery?: IGalleryExtension;
 	readonly isMalicious: boolean;
+	readonly isUnsupported: boolean | { preReleaseExtension: { id: string, displayName: string } };
 }
 
 export const SERVICE_ID = 'extensionsWorkbenchService';
@@ -92,8 +94,10 @@ export interface IExtensionsWorkbenchService {
 	queryLocal(server?: IExtensionManagementServer): Promise<IExtension[]>;
 	queryGallery(token: CancellationToken): Promise<IPager<IExtension>>;
 	queryGallery(options: IQueryOptions, token: CancellationToken): Promise<IPager<IExtension>>;
+	getExtensions(extensionInfos: IExtensionInfo[], token: CancellationToken): Promise<IExtension[]>;
+	getExtensions(extensionInfos: IExtensionInfo[], options: IExtensionQueryOptions, token: CancellationToken): Promise<IExtension[]>;
 	canInstall(extension: IExtension): Promise<boolean>;
-	install(vsix: URI): Promise<IExtension>;
+	install(vsix: URI, installOptions?: InstallVSIXOptions): Promise<IExtension>;
 	install(extension: IExtension, installOptions?: InstallOptions): Promise<IExtension>;
 	uninstall(extension: IExtension): Promise<void>;
 	installVersion(extension: IExtension, version: string, installOptions?: InstallOptions): Promise<IExtension>;
@@ -179,3 +183,7 @@ export const LIST_WORKSPACE_UNSUPPORTED_EXTENSIONS_COMMAND_ID = 'workbench.exten
 export const DefaultViewsContext = new RawContextKey<boolean>('defaultExtensionViews', true);
 export const ExtensionsSortByContext = new RawContextKey<string>('extensionsSortByValue', '');
 export const HasOutdatedExtensionsContext = new RawContextKey<boolean>('hasOutdatedExtensions', false);
+
+// Context Menu Groups
+export const THEME_ACTIONS_GROUP = '_theme_';
+export const INSTALL_ACTIONS_GROUP = '0_install';

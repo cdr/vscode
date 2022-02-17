@@ -20,12 +20,13 @@ import { ExtensionMessageCollector, ExtensionPoint, ExtensionsRegistry, IExtensi
 import { ExtensionDescriptionRegistry } from 'vs/workbench/services/extensions/common/extensionDescriptionRegistry';
 import { ResponsiveState } from 'vs/workbench/services/extensions/common/rpcProtocol';
 import { createExtensionHostManager, IExtensionHostManager } from 'vs/workbench/services/extensions/common/extensionHostManager';
-import { ExtensionIdentifier, IExtensionDescription, IExtension, ExtensionKind, IExtensionContributions } from 'vs/platform/extensions/common/extensions';
+import { ExtensionIdentifier, IExtensionDescription, IExtension, IExtensionContributions } from 'vs/platform/extensions/common/extensions';
+import { ExtensionKind } from 'vs/platform/environment/common/environment';
 import { IFileService } from 'vs/platform/files/common/files';
 import { parseExtensionDevOptions } from 'vs/workbench/services/extensions/common/extensionDevOptions';
 import { IProductService } from 'vs/platform/product/common/productService';
 import { ExtensionActivationReason } from 'vs/workbench/api/common/extHostExtensionActivator';
-import { IExtensionManagementService } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { IExtensionManagementService, InstallOperation } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { IExtensionActivationHost as IWorkspaceContainsActivationHost, checkGlobFileExists, checkActivateWorkspaceContainsExtension } from 'vs/workbench/api/common/shared/workspaceContains';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -238,8 +239,8 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 
 		this._register(this._extensionManagementService.onDidInstallExtensions((result) => {
 			const extensions: IExtension[] = [];
-			for (const { local } of result) {
-				if (local && this._safeInvokeIsEnabled(local)) {
+			for (const { local, operation } of result) {
+				if (local && operation !== InstallOperation.Migrate && this._safeInvokeIsEnabled(local)) {
 					extensions.push(local);
 				}
 			}
@@ -1156,16 +1157,16 @@ class ProposedApiController {
 		// NEW world - product.json spells out what proposals each extension can use
 		if (productService.extensionEnabledApiProposals) {
 			forEach(productService.extensionEnabledApiProposals, entry => {
+				const key = ExtensionIdentifier.toKey(entry.key);
 				const proposalNames = entry.value.filter(name => {
 					if (!allApiProposals[<ApiProposalName>name]) {
-						_logService.warn(`Extension '${key} wants API proposal '${name}' but that proposal DOES NOT EXIST.`);
+						_logService.warn(`Via 'product.json#extensionEnabledApiProposals' extension '${key}' wants API proposal '${name}' but that proposal DOES NOT EXIST. Likely, the proposal has been finalized (check 'vscode.d.ts') or was abandoned.`);
 						return false;
 					}
 					return true;
 				});
-				const key = ExtensionIdentifier.toKey(entry.key);
 				if (this._productEnabledExtensions.has(key)) {
-					_logService.warn(`Extension '${key} appears in BOTH 'product.json#extensionAllowedProposedApi' and 'extensionEnabledApiProposals'. The latter is more restrictive and will override the former.`);
+					_logService.warn(`Extension '${key}' appears in BOTH 'product.json#extensionAllowedProposedApi' and 'extensionEnabledApiProposals'. The latter is more restrictive and will override the former.`);
 				}
 				this._productEnabledExtensions.set(key, proposalNames);
 			});
@@ -1177,8 +1178,19 @@ class ProposedApiController {
 		// this is a trick to make the extension description writeable...
 		type Writeable<T> = { -readonly [P in keyof T]: Writeable<T[P]> };
 		const extension = <Writeable<IExtensionDescription>>_extension;
-
 		const key = ExtensionIdentifier.toKey(_extension.identifier);
+
+		// warn about invalid proposal and remove them from the list
+		if (isNonEmptyArray(extension.enabledApiProposals)) {
+			extension.enabledApiProposals = extension.enabledApiProposals.filter(name => {
+				const result = Boolean(allApiProposals[<ApiProposalName>name]);
+				if (!result) {
+					this._logService.critical(`Extension '${key}' wants API proposal '${name}' but that proposal DOES NOT EXIST. Likely, the proposal has been finalized (check 'vscode.d.ts') or was abandoned.`);
+				}
+				return result;
+			});
+		}
+
 
 		if (this._productEnabledExtensions.has(key)) {
 			// NOTE that proposals that are listed in product.json override whatever is declared in the extension
@@ -1192,7 +1204,7 @@ class ProposedApiController {
 			const extensionSet = new Set(extension.enabledApiProposals);
 			const diff = new Set([...extensionSet].filter(a => !productSet.has(a)));
 			if (diff.size > 0) {
-				this._logService.critical(`Extension '${key}' appears in product.json but enables LESS API proposals than the extension wants.\npackage.json (LOOSES): ${[...extensionSet].join(', ')}\nproduct.json (WINS): ${[...productSet].join(', ')}`);
+				this._logService.critical(`Extension '${key}' appears in product.json but enables LESS API proposals than the extension wants.\npackage.json (LOSES): ${[...extensionSet].join(', ')}\nproduct.json (WINS): ${[...productSet].join(', ')}`);
 
 				if (this._environmentService.isExtensionDevelopment) {
 					this._logService.critical(`Proceeding with EXTRA proposals (${[...diff].join(', ')}) because extension is in development mode. Still, this EXTENSION WILL BE BROKEN unless product.json is updated.`);
