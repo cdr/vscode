@@ -13,17 +13,14 @@ function code() {
 	# # Sync built-in extensions
 	# yarn download-builtin-extensions
 
-<<<<<<< HEAD:resources/server/web.sh
-	# # Load remote node
-	# yarn gulp node
-
-=======
->>>>>>> upstream/release/1.64:scripts/code-server.sh
-	NODE=$(node build/lib/node.js)
-	if [ ! -e $NODE ];then
+	# NOTE@coder: Never load the remote node
+	# This leads to Node discrepencies between
+	# local and remote and causes issues.
+	# NODE=$(node build/lib/node.js)
+	# if [ ! -e $NODE ];then
 		# Load remote node
-		yarn gulp node
-	fi
+		# yarn gulp node
+	# fi
 
 	NODE_ENV=development \
 	VSCODE_DEV=1 \
