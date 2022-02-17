@@ -14,22 +14,10 @@ import { FileAccess } from 'vs/base/common/network';
 import { AuthType } from 'vs/base/common/auth';
 
 export const serverOptions: OptionDescriptions<ServerParsedArgs> = {
-<<<<<<< HEAD:src/vs/server/serverEnvironmentService.ts
 	//#region @coder
 	'auth': { type: 'string' },
 	'locale': { type: 'string' },
 	//#endregion
-
-	'port': { type: 'string' },
-	'pick-port': { type: 'string' },
-	'connectionToken': { type: 'string' }, // deprecated in favor of `--connection-token`
-	'connection-token': { type: 'string', description: nls.localize('connection-token', "A secret that must be included by the web client with all requests.") },
-	'connection-secret': { type: 'string', description: nls.localize('connection-secret', "Path to file that contains the connection token. This will require that all incoming connections know the secret.") },
-	'host': { type: 'string' },
-	'socket-path': { type: 'string' },
-	'driver': { type: 'string' },
-	'start-server': { type: 'boolean' },
-=======
 
 	/* ----- server setup ----- */
 
@@ -41,7 +29,6 @@ export const serverOptions: OptionDescriptions<ServerParsedArgs> = {
 	'connection-token-file': { type: 'string', cat: 'o', args: 'path', deprecates: ['connection-secret', 'connectionTokenFile'], description: nls.localize('connection-token-file', "Path to a file that contains the connection token.") },
 	'without-connection-token': { type: 'boolean', cat: 'o', description: nls.localize('without-connection-token', "Run without a connection token. Only use this if the connection is secured by other means.") },
 	'disable-websocket-compression': { type: 'boolean' },
->>>>>>> upstream/release/1.64:src/vs/server/node/serverEnvironmentService.ts
 	'print-startup-performance': { type: 'boolean' },
 	'print-ip-address': { type: 'boolean' },
 	'accept-server-license-terms': { type: 'boolean', cat: 'o', description: nls.localize('acceptLicenseTerms', "If set, the user accepts the server license terms and the server will be started without a user prompt.") },
@@ -104,18 +91,15 @@ export const serverOptions: OptionDescriptions<ServerParsedArgs> = {
 };
 
 export interface ServerParsedArgs {
-<<<<<<< HEAD:src/vs/server/serverEnvironmentService.ts
 	//#region
 	auth?: AuthType;
 	'locale'?: string
 	//#endregion
 
-=======
 
 	/* ----- server setup ----- */
 
 	host?: string;
->>>>>>> upstream/release/1.64:src/vs/server/node/serverEnvironmentService.ts
 	port?: string;
 	'pick-port'?: string;
 	'socket-path'?: string;
