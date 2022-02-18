@@ -220,6 +220,7 @@ export class IndexedDBStorageDatabase extends Disposable implements IIndexedDBSt
 		 * different machines that share the same domain and file path from
 		 * colliding (since it does not appear IndexedDB can be scoped to a path) as
 		 * long as they are hosted on different paths.
+		 * @author coder
 		 */
 		const windowId = hash(location.pathname.toString()).toString(16);
 		this.name = `${IndexedDBStorageDatabase.STORAGE_DATABASE_PREFIX}${windowId}-${options.id}`;
