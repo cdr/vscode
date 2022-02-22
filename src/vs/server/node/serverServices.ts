@@ -102,6 +102,7 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 		spdLogService.info(`\n\n${serverGreeting}\n\n`);
 	}
 
+
 	// ExtensionHost Debug broadcast service
 	socketServer.registerChannel(ExtensionHostDebugBroadcastChannel.ChannelName, new ExtensionHostDebugBroadcastChannel());
 
@@ -197,6 +198,17 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 		const extensionManagementService = accessor.get(IExtensionManagementService);
 		const channel = new ExtensionManagementChannel(extensionManagementService, (ctx: RemoteAgentConnectionContext) => getUriTransformer(ctx.remoteAuthority));
 		socketServer.registerChannel('extensions', channel);
+
+		/**
+		* Register localizations channel.
+		* @author coder
+		*/
+		const localizationsChannel = ProxyChannel.fromService<RemoteAgentConnectionContext>(accessor.get(ILocalizationsService));
+		socketServer.registerChannel('localizations', localizationsChannel);
+
+		// NOTE@coder
+		// TODO@jsjoeio
+		// We used to have a a theme service. Might need to drop it in here too.
 
 		const encryptionChannel = ProxyChannel.fromService<RemoteAgentConnectionContext>(accessor.get(IEncryptionMainService));
 		socketServer.registerChannel('encryption', encryptionChannel);

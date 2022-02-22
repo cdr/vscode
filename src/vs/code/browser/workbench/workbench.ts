@@ -10,12 +10,8 @@ import { Emitter } from 'vs/base/common/event';
 import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
 import { Schemas } from 'vs/base/common/network';
 import { isEqual } from 'vs/base/common/resources';
-<<<<<<< HEAD
 import { encodePath, URI, UriComponents } from 'vs/base/common/uri';
 import { generateUuid } from 'vs/base/common/uuid';
-=======
-import { URI, UriComponents } from 'vs/base/common/uri';
->>>>>>> upstream/release/1.64
 import { request } from 'vs/base/parts/request/browser/request';
 import product from 'vs/platform/product/common/product';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
@@ -554,7 +550,7 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 	/**
 	 * If the value begins with a slash assume it is a file path and convert it to
 	 * use the vscode-remote scheme.
-	 * 
+	 *
 	 * We also add the remote authority in toRemote. It needs to be accurate
 	 * otherwise other URIs won't match it, leading to issues such as this one:
 	 * https://github.com/coder/code-server/issues/4630

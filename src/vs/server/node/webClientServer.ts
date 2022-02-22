@@ -9,27 +9,20 @@ import * as url from 'url';
 import * as util from 'util';
 import * as cookie from 'cookie';
 import * as crypto from 'crypto';
-import { isEqualOrParent } from 'vs/base/common/extpath';
+import { isEqualOrParent, sanitizeFilePath } from 'vs/base/common/extpath';
 import { getMediaMime } from 'vs/base/common/mime';
 import { isLinux } from 'vs/base/common/platform';
 import { ILogService } from 'vs/platform/log/common/log';
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
-import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/remoteLanguagePacks';
-import { IServerEnvironmentService } from 'vs/server/serverEnvironmentService';
-=======
 import { IServerEnvironmentService } from 'vs/server/node/serverEnvironmentService';
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
 import { extname, dirname, join, normalize } from 'vs/base/common/path';
 import { FileAccess, connectionTokenCookieName, connectionTokenQueryName } from 'vs/base/common/network';
 import { generateUuid } from 'vs/base/common/uuid';
 import { IProductService } from 'vs/platform/product/common/productService';
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
 // eslint-disable-next-line code-import-patterns
-import type { IWorkbenchConstructionOptions } from 'vs/workbench/workbench.web.api';
+import type { IWorkbenchConstructionOptions } from 'vs/workbench/workbench.web.main';
 import { editorBackground, editorForeground } from 'vs/platform/theme/common/colorRegistry';
 import { ClientTheme, getOriginalUrl, HTTPNotFoundError, relativePath, relativeRoot, WebManifest } from 'vs/server/common/net';
 import { IServerThemeService } from 'vs/server/serverThemeService';
-=======
 import { ServerConnectionToken, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
 import { asText, IRequestService } from 'vs/platform/request/common/request';
 import { IHeaders } from 'vs/base/parts/request/common/request';
@@ -38,7 +31,10 @@ import { URI } from 'vs/base/common/uri';
 import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
+import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { createRemoteURITransformer } from 'vs/server/node/remoteUriTransformer';
+import { cwd } from 'vs/base/common/process';
 
 const textMimeType = {
 	'.html': 'text/html',
@@ -84,27 +80,22 @@ export async function serveFile(logService: ILogService, req: http.IncomingMessa
 const APP_ROOT = dirname(FileAccess.asFileUri('', require).fsPath);
 
 export class WebClientServer {
+	ctor: any;
 
 	private readonly _webExtensionResourceUrlTemplate: URI | undefined;
 
 	constructor(
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
-		private readonly _connectionToken: string,
-		private readonly _environmentService: IServerEnvironmentService,
-		private readonly _logService: ILogService,
-		private readonly _themeService: IServerThemeService,
-		private readonly _productService: IProductService,
-	) { }
-=======
 		private readonly _connectionToken: ServerConnectionToken,
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
+		// NOTE@coder
+		// TODO@jsjoeio - I think we need to add theme service
+		@IThemeService private readonly _themeService: IServerThemeService,
 		@IProductService private readonly _productService: IProductService,
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
 	}
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
 
 	/**
 	 * Handle web resources (i.e. only needed by the web client).
@@ -339,19 +330,11 @@ export class WebClientServer {
 			return this.serveError(req, res, 400, `Bad request.`, parsedUrl);
 		}
 
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
-		const { backgroundColor, foregroundColor } = await this.fetchClientTheme();
-
-		const queryTkn = parsedUrl.query['tkn'];
-		if (typeof queryTkn === 'string') {
-			// tkn came in via a query string
-			// => set a cookie and redirect to url without tkn
-=======
+		// const { backgroundColor, foregroundColor } = await this.fetchClientTheme();
 		const queryConnectionToken = parsedUrl.query[connectionTokenQueryName];
 		if (typeof queryConnectionToken === 'string') {
 			// We got a connection token as a query parameter.
 			// We want to have a clean URL, so we strip it
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
 			const responseHeaders: Record<string, string> = Object.create(null);
 			responseHeaders['Set-Cookie'] = cookie.serialize(
 				connectionTokenCookieName,
@@ -375,13 +358,6 @@ export class WebClientServer {
 			return res.end();
 		}
 
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
-		// NOTE@coder: Disable until supported (currently this results in 403 errors
-		// in production builds and we already have authentication).
-		// if (this._environmentService.isBuilt && !this._hasCorrectTokenCookie(req)) {
-		// 	return this.serveError(req, res, 403, `Forbidden.`, parsedUrl);
-		// }
-
 		/**
 		 * It is not possible to reliably detect the remote authority on the server
 		 * in all cases.  Set this to something invalid to make sure we catch code
@@ -390,11 +366,8 @@ export class WebClientServer {
 		 * @author coder
 		 */
 		const remoteAuthority = 'remote';
-		const transformer = createRemoteURITransformer(remoteAuthority);
-		const { workspacePath, isFolder } = await this._getWorkspaceFromCLI();
-=======
-		const remoteAuthority = req.headers.host;
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
+		// const transformer = createRemoteURITransformer(remoteAuthority);
+		// const { workspacePath, isFolder } = await this._getWorkspaceFromCLI();
 
 		function escapeAttribute(value: string): string {
 			return value.replace(/"/g, '&quot;');
@@ -421,9 +394,19 @@ export class WebClientServer {
 		const base = relativeRoot(getOriginalUrl(req))
 		const vscodeBase = relativePath(getOriginalUrl(req))
 		const data = (await util.promisify(fs.readFile)(filePath)).toString()
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
 			.replace('{{WORKBENCH_WEB_CONFIGURATION}}', escapeAttribute(JSON.stringify(<IWorkbenchConstructionOptions>{
-				productConfiguration: {
+				// TODO@jsjoeio check if this still works (passing them via the CLI)
+				// folderUri: (workspacePath && isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
+				// workspaceUri: (workspacePath && !isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
+				remoteAuthority,
+				_wrapWebWorkerExtHostInIframe,
+				developmentOptions: {
+					enableSmokeTestDriver: this._environmentService.driverHandle === 'web' ? true : undefined,
+					logLevel: this._logService.getLevel(),
+				},
+				userDataPath: this._environmentService.userDataPath,
+				settingsSyncOptions: !this._environmentService.isBuilt && this._environmentService.args['enable-sync'] ? { enabled: true } : undefined,
+				productConfiguration: <Partial<IProductConfiguration>>{
 					...this._productService,
 
 					// Session
@@ -443,21 +426,8 @@ export class WebClientServer {
 					webEndpointUrlTemplate: vscodeBase + '/static',
 					webviewContentExternalBaseUrlTemplate: vscodeBase + '/webview/{{uuid}}/',
 					updateUrl: base + '/update/check',
-				},
-				folderUri: (workspacePath && isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
-				workspaceUri: (workspacePath && !isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
-=======
-			.replace('{{WORKBENCH_WEB_CONFIGURATION}}', escapeAttribute(JSON.stringify({
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
-				remoteAuthority,
-				_wrapWebWorkerExtHostInIframe,
-				developmentOptions: {
-					enableSmokeTestDriver: this._environmentService.driverHandle === 'web' ? true : undefined,
-					logLevel: this._logService.getLevel(),
-				},
-				userDataPath: this._environmentService.userDataPath,
-				settingsSyncOptions: !this._environmentService.isBuilt && this._environmentService.args['enable-sync'] ? { enabled: true } : undefined,
-				productConfiguration: <Partial<IProductConfiguration>>{
+					// NOTE@coder
+					// TODO@jsjoeio - we need to test web extensions and make sure they still work.
 					extensionsGallery: this._webExtensionResourceUrlTemplate ? {
 						...this._productService.extensionsGallery,
 						'resourceUrlTemplate': this._webExtensionResourceUrlTemplate.with({
@@ -466,25 +436,19 @@ export class WebClientServer {
 							path: `web-extension-resource/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
 						}).toString(true)
 					} : undefined
-				}
+				},
 			})))
 			.replace(/{{NLS_CONFIGURATION}}/g, () => escapeAttribute(JSON.stringify(nlsConfiguration)))
-			.replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => backgroundColor)
-			.replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => foregroundColor)
+			// .replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => backgroundColor)
+			// .replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => foregroundColor)
 			.replace('{{WORKBENCH_AUTH_SESSION}}', () => authSessionInfo ? escapeAttribute(JSON.stringify(authSessionInfo)) : '')
 			.replace(/{{BASE}}/g, () => vscodeBase);
 
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
-			'media-src \'none\';',
-			// the sha is the same as in src/vs/workbench/services/extensions/worker/httpWebWorkerExtensionHostIframe.html
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-cb2sg39EJV8ABaSNFfWu/ou8o1xVXYK7jp90oZ9vpcg=';`,
-=======
 			'media-src \'self\';',
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-9CevbjD7QdrWdGrVTVJD74tTH4eAhisvCOlLtWUn+Iw=' http://${remoteAuthority};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
+			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-9CevbjD7QdrWdGrVTVJD74tTH4eAhisvCOlLtWUn+Iw=';`, // the sha is the same as in src/vs/workbench/services/extensions/worker/httpWebWorkerExtensionHostIframe.html
 			'child-src \'self\';',
 			`frame-src 'self' ${this._productService.webEndpointUrl || ''} data:;`,
 			'worker-src \'self\' data:;',
@@ -574,7 +538,9 @@ export class WebClientServer {
 			}
 		}
 
-		const clientTheme = await this.fetchClientTheme();
+		// TODO@jsjoeio - may need to add fetchClientTheme back in
+		// Check later
+		// const clientTheme = await this.fetchClientTheme();
 
 		res.setHeader('Content-Type', 'text/html');
 
@@ -584,10 +550,35 @@ export class WebClientServer {
 			.replace(/{{ERROR_CODE}}/g, () => code.toString())
 			.replace(/{{ERROR_MESSAGE}}/g, () => message)
 			.replace(/{{ERROR_FOOTER}}/g, () => `${version} - ${commit}`)
-			.replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => clientTheme.backgroundColor)
-			.replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => clientTheme.foregroundColor)
+			// .replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => clientTheme.backgroundColor)
+			// .replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => clientTheme.foregroundColor)
 			.replace(/{{BASE}}/g, () => relativePath(getOriginalUrl(req)));
 
 		res.end(data);
 	};
+
+	// TODO@jsjoeio maybe delete this
+	// private async _getWorkspaceFromCLI(): Promise<{ workspacePath?: string, isFolder?: boolean }> {
+
+	// 	// check for workspace argument
+	// 	const workspaceCandidate = this._environmentService.args['workspace'];
+	// 	if (workspaceCandidate && workspaceCandidate.length > 0) {
+	// 		const workspace = sanitizeFilePath(workspaceCandidate, cwd());
+	// 		if (await util.promisify(fs.exists)(workspace)) {
+	// 			return { workspacePath: workspace };
+	// 		}
+	// 	}
+
+	// 	// check for folder argument
+	// 	const folderCandidate = this._environmentService.args['folder'];
+	// 	if (folderCandidate && folderCandidate.length > 0) {
+	// 		const folder = sanitizeFilePath(folderCandidate, cwd());
+	// 		if (await util.promisify(fs.exists)(folder)) {
+	// 			return { workspacePath: folder, isFolder: true };
+	// 		}
+	// 	}
+
+	// 	// empty window otherwise
+	// 	return {};
+	// }
 }
