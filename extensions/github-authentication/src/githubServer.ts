@@ -15,7 +15,12 @@ import { Log } from './common/logger';
 const localize = nls.loadMessageBundle();
 
 const NETWORK_ERROR = 'network error';
-const AUTH_RELAY_SERVER = 'vscode-auth.github.com';
+/**
+ * Change the auth relay server to our own as Microsoft's does not support
+ * self-hosted instances.
+ * @author coder
+ */
+const AUTH_RELAY_SERVER = 'auth.code-server.dev';
 // const AUTH_RELAY_STAGING_SERVER = 'client-auth-staging-14a768b.herokuapp.com';
 
 class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements vscode.UriHandler {
