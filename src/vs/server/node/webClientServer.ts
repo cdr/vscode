@@ -22,7 +22,7 @@ import { IProductService } from 'vs/platform/product/common/productService';
 import type { IWorkbenchConstructionOptions } from 'vs/workbench/workbench.web.main';
 import { editorBackground, editorForeground } from 'vs/platform/theme/common/colorRegistry';
 import { ClientTheme, getOriginalUrl, HTTPNotFoundError, relativePath, relativeRoot, WebManifest } from 'vs/server/common/net';
-import { IServerThemeService } from 'vs/server/serverThemeService';
+import { IServerThemeService } from 'vs/server/node/serverThemeService';
 import { ServerConnectionToken, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
 import { asText, IRequestService } from 'vs/platform/request/common/request';
 import { IHeaders } from 'vs/base/parts/request/common/request';
@@ -32,7 +32,6 @@ import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
-import { IThemeService } from 'vs/platform/theme/common/themeService';
 
 const textMimeType = {
 	'.html': 'text/html',
@@ -78,8 +77,6 @@ export async function serveFile(logService: ILogService, req: http.IncomingMessa
 const APP_ROOT = dirname(FileAccess.asFileUri('', require).fsPath);
 
 export class WebClientServer {
-	ctor: any;
-
 	private readonly _webExtensionResourceUrlTemplate: URI | undefined;
 
 	constructor(
@@ -87,8 +84,8 @@ export class WebClientServer {
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
-		@IThemeService private readonly _themeService: IServerThemeService,
 		@IProductService private readonly _productService: IProductService,
+		@IServerThemeService private readonly _themeService: IServerThemeService,
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
 	}

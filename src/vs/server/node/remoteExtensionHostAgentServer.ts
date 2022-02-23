@@ -12,8 +12,10 @@ import { performance } from 'perf_hooks';
 import * as url from 'url';
 import { LoaderStats } from 'vs/base/common/amd';
 import { VSBuffer } from 'vs/base/common/buffer';
+import { isEqualOrParent } from 'vs/base/common/extpath';
 import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { connectionTokenQueryName, FileAccess, Schemas } from 'vs/base/common/network';
+import { dirname, join } from 'vs/base/common/path';
 import * as perf from 'vs/base/common/performance';
 import * as platform from 'vs/base/common/platform';
 import { URI } from 'vs/base/common/uri';
@@ -26,8 +28,6 @@ import { ILogService } from 'vs/platform/log/common/log';
 import { IProductService } from 'vs/platform/product/common/productService';
 import { ConnectionType, ConnectionTypeRequest, ErrorMessage, HandshakeMessage, IRemoteExtensionHostStartParams, ITunnelConnectionStartParams, SignRequest } from 'vs/platform/remote/common/remoteAgentConnection';
 import { RemoteAgentConnectionContext } from 'vs/platform/remote/common/remoteAgentEnvironment';
-import { isEqualOrParent } from 'vs/base/common/extpath';
-import { dirname, join } from 'vs/base/common/path';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { ExtensionHostConnection } from 'vs/server/node/extensionHostConnection';
 import { ManagementConnection } from 'vs/server/node/remoteExtensionManagement';
@@ -53,17 +53,15 @@ declare module vsda {
 }
 
 export class RemoteExtensionHostAgentServer extends Disposable {
-	ctor: any;
 
 	private readonly _extHostConnections: { [reconnectionToken: string]: ExtensionHostConnection; };
 	private readonly _managementConnections: { [reconnectionToken: string]: ManagementConnection; };
 	private readonly _allReconnectionTokens: Set<string>;
-	private _webClientServer: WebClientServer | null = null;
+	private readonly _webClientServer: WebClientServer | null;
 
 	private shutdownTimer: NodeJS.Timer | undefined;
 
 	constructor(
-		REMOTE_DATA_FOLDER: string,
 		private readonly _socketServer: SocketServer<RemoteAgentConnectionContext>,
 		private readonly _connectionToken: ServerConnectionToken,
 		hasWebClient: boolean,

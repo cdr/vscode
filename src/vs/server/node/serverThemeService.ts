@@ -11,7 +11,7 @@ import { IFileService } from 'vs/platform/files/common/files';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { ILogService } from 'vs/platform/log/common/log';
 import { ColorScheme } from 'vs/platform/theme/common/theme';
-import { RemoteAgentEnvironmentChannel } from 'vs/server/remoteAgentEnvironmentImpl';
+import { RemoteAgentEnvironmentChannel } from 'vs/server/node/remoteAgentEnvironmentImpl';
 import { IExtensionResourceLoaderService } from 'vs/workbench/services/extensionResourceLoader/common/extensionResourceLoader';
 import { ExtensionMessageCollector, IExtensionPoint, IExtensionPointUser } from 'vs/workbench/services/extensions/common/extensionsRegistry';
 import { ColorThemeData } from 'vs/workbench/services/themes/common/colorThemeData';
@@ -19,12 +19,15 @@ import { ThemeConfiguration } from 'vs/workbench/services/themes/common/themeCon
 import { registerColorThemeExtensionPoint, ThemeRegistry } from 'vs/workbench/services/themes/common/themeExtensionPoints';
 import { IThemeExtensionPoint } from 'vs/workbench/services/themes/common/workbenchThemeService';
 
+export const IServerThemeService = createDecorator<IServerThemeService>('IServerThemeService');
+
 export interface IServerThemeService {
+	readonly _serviceBrand: undefined;
+
 	fetchColorThemeData(): Promise<ColorThemeData>;
 	readyPromise: Promise<void>;
 }
 
-export const IServerThemeService = createDecorator<IServerThemeService>('IServerThemeService');
 let colorThemesExtPoint: IExtensionPoint<IThemeExtensionPoint[]>;
 let colorThemeRegistry: ThemeRegistry<ColorThemeData>;
 
@@ -46,11 +49,12 @@ const extPointName = colorThemesExtPoint.name;
  * @remark This is not yet as robust as `WorkbenchThemeService`
  */
 export class ServerThemeService implements IServerThemeService {
+	readonly _serviceBrand: undefined;
 	private logPrefix = '[Theme Service]';
 	private machineThemeConfiguration = new ThemeConfiguration(this.machineConfigurationService);
 	public readyPromise: Promise<void>;
 
-	constructor (
+	constructor(
 		private logService: ILogService,
 		private machineConfigurationService: IConfigurationService,
 		private extensionScannerService: RemoteAgentEnvironmentChannel,
@@ -111,7 +115,7 @@ export class ExtensionResourceLoaderService implements IExtensionResourceLoaderS
 	declare readonly _serviceBrand: undefined;
 	public supportsExtensionGalleryResources = false;
 
-	constructor (
+	constructor(
 		@IFileService private readonly _fileService: IFileService
 	) { }
 
