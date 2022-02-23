@@ -300,6 +300,10 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		query.forEach((value, key) => {
 			switch (key) {
 
+				// TODO@jsjoeio
+				// We need to test that...
+				// 1. If you do File > Open Folder (it should use short version without vscode version)
+				// 2. If you do folder?=/path/to/folder in the URI, it should work.
 				// Folder
 				case WorkspaceProvider.QUERY_PARAM_FOLDER:
 					if (config.remoteAuthority && value.startsWith(posix.sep)) {
@@ -343,15 +347,19 @@ class WorkspaceProvider implements IWorkspaceProvider {
 			}
 		});
 
-		// If no workspace is provided through the URL, check for config
-		// attribute from server and fallback to last opened workspace
-		// from storage
+		// NOTE@coder we have our own logic to determine last open workspace
+		// This code will never run since we have our redirect logic before
+		// getting here.
+		// If we do want to use this, we need to add a flag check.
+		// TODO@jsjoeio revisit this later^
+		const DISABLE_LAST_OPENED = true
+
 		if (!foundWorkspace) {
 			if (config.folderUri) {
 				workspace = { folderUri: URI.revive(config.folderUri) };
 			} else if (config.workspaceUri) {
 				workspace = { workspaceUri: URI.revive(config.workspaceUri) };
-			} else {
+			} else if (!DISABLE_LAST_OPENED) {
 				workspace = (() => {
 					const lastWorkspaceRaw = window.localStorage.getItem(WorkspaceProvider.LAST_WORKSPACE_STORAGE_KEY);
 					if (lastWorkspaceRaw) {
@@ -418,18 +426,7 @@ class WorkspaceProvider implements IWorkspaceProvider {
 			targetHref = `${document.location.origin}${document.location.pathname}?${WorkspaceProvider.QUERY_PARAM_EMPTY_WINDOW}=true`;
 		}
 
-		// Folder
-		/**
-		 * Modified to print as a human-readable string for file paths.
-		 * @author coder
-		 */
 		else if (isFolderToOpen(workspace)) {
-<<<<<<< HEAD
-			const target = workspace.folderUri.scheme === Schemas.vscodeRemote
-				? encodePath(workspace.folderUri.path)
-				: encodeURIComponent(workspace.folderUri.toString());
-			targetHref = `${document.location.origin}${document.location.pathname}?${WorkspaceProvider.QUERY_PARAM_FOLDER}=${target}`;
-=======
 			let queryParamFolder: string;
 			if (this.config.remoteAuthority && workspace.folderUri.scheme === Schemas.vscodeRemote) {
 				// when connected to a remote and having a folder
@@ -443,21 +440,10 @@ class WorkspaceProvider implements IWorkspaceProvider {
 			}
 
 			targetHref = `${document.location.origin}${document.location.pathname}?${WorkspaceProvider.QUERY_PARAM_FOLDER}=${queryParamFolder}`;
->>>>>>> upstream/release/1.64
 		}
 
 		// Workspace
-		/**
-		 * Modified to print as a human-readable string for file paths.
-		 * @author coder
-		 */
 		else if (isWorkspaceToOpen(workspace)) {
-<<<<<<< HEAD
-			const target = workspace.workspaceUri.scheme === Schemas.vscodeRemote
-				? encodePath(workspace.workspaceUri.path)
-				: encodeURIComponent(workspace.workspaceUri.toString());
-			targetHref = `${document.location.origin}${document.location.pathname}?${WorkspaceProvider.QUERY_PARAM_WORKSPACE}=${target}`;
-=======
 			let queryParamWorkspace: string;
 			if (this.config.remoteAuthority && workspace.workspaceUri.scheme === Schemas.vscodeRemote) {
 				// when connected to a remote and having a workspace
@@ -470,7 +456,6 @@ class WorkspaceProvider implements IWorkspaceProvider {
 			}
 
 			targetHref = `${document.location.origin}${document.location.pathname}?${WorkspaceProvider.QUERY_PARAM_WORKSPACE}=${queryParamWorkspace}`;
->>>>>>> upstream/release/1.64
 		}
 
 		// Append payload if any
@@ -538,148 +523,19 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 	if (!configElement || !configElementAttribute) {
 		throw new Error('Missing web configuration element');
 	}
-	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents, workspaceUri?: UriComponents } = JSON.parse(configElementAttribute);
-
-<<<<<<< HEAD
-	// Find workspace to open and payload
-	let foundWorkspace = false;
-	let workspace: IWorkspace;
-	let payload = Object.create(null);
-	let logLevel: string | undefined = undefined;
-
 	/**
-	 * If the value begins with a slash assume it is a file path and convert it to
-	 * use the vscode-remote scheme.
-	 *
-	 * We also add the remote authority in toRemote. It needs to be accurate
-	 * otherwise other URIs won't match it, leading to issues such as this one:
-	 * https://github.com/coder/code-server/issues/4630
-	 *
+	 * Ensure the remote authority points to the current address since we cannot
+	 * determine this reliably on the backend.
 	 * @author coder
 	 */
-	const remoteAuthority = location.host
-	const toRemote = (value: string): string => {
-		if (value.startsWith('/')) {
-			return 'vscode-remote://' + remoteAuthority + value;
-		}
-		return value;
-	};
-
-	const query = new URL(document.location.href).searchParams;
-	query.forEach((value, key) => {
-		switch (key) {
-			// Folder
-			case WorkspaceProvider.QUERY_PARAM_FOLDER:
-				/**
-				 * Handle URIs that we previously left unencoded and de-schemed.
-				 *
-				 * @author coder
-				 */
-				value = toRemote(value);
-				workspace = { folderUri: URI.parse(value) };
-				foundWorkspace = true;
-				break;
-
-			// Workspace
-			case WorkspaceProvider.QUERY_PARAM_WORKSPACE:
-				/**
-				 * Handle URIs that we previously left unencoded and de-schemed.
-				 *
-				 * @author coder
-				 */
-				value = toRemote(value);
-				workspace = { workspaceUri: URI.parse(value) };
-				foundWorkspace = true;
-				break;
-
-			// Empty
-			case WorkspaceProvider.QUERY_PARAM_EMPTY_WINDOW:
-				workspace = undefined;
-				foundWorkspace = true;
-				break;
-
-			// Payload
-			case WorkspaceProvider.QUERY_PARAM_PAYLOAD:
-				try {
-					payload = JSON.parse(value);
-				} catch (error) {
-					console.error(error); // possible invalid JSON
-				}
-				break;
-
-			// Log level
-			case 'logLevel':
-				logLevel = value;
-				break;
-		}
-	});
-
-	// If no workspace is provided through the URL, check for config attribute from server
-	if (!foundWorkspace) {
-		if (config.folderUri) {
-			workspace = { folderUri: URI.revive(config.folderUri) };
-		} else if (config.workspaceUri) {
-			workspace = { workspaceUri: URI.revive(config.workspaceUri) };
-		} else {
-			workspace = undefined;
-		}
-	}
-
-	// Workspace Provider
-	const workspaceProvider = new WorkspaceProvider(workspace, payload);
-
-	// Home Indicator
-	const homeIndicator: IHomeIndicator = {
-		href: 'https://github.com/microsoft/vscode',
-		icon: 'code',
-		title: localize('home', "Home")
-	};
-
-
-	// Welcome Banner
-	const welcomeBanner: undefined | IWelcomeBanner = undefined;
-	// 	message: localize('welcomeBannerMessage', "{0} Web. Browser based playground for testing.", product.nameShort),
-	// 	actions: [{
-	// 		href: 'https://github.com/microsoft/vscode',
-	// 		label: localize('learnMore', "Learn More")
-	// 	}]
-	// };
-
-	// Window indicator (unless connected to a remote)
-	let windowIndicator: WindowIndicator | undefined = undefined;
-	if (!workspaceProvider.hasRemote()) {
-		windowIndicator = new WindowIndicator(workspace);
-	}
-
-	// Product Quality Change Handler
-	const productQualityChangeHandler: IProductQualityChangeHandler = (quality) => {
-		let queryString = `quality=${quality}`;
-
-		// Save all other query params we might have
-		const query = new URL(document.location.href).searchParams;
-		query.forEach((value, key) => {
-			if (key !== 'quality') {
-				queryString += `&${key}=${value}`;
-			}
-		});
-
-		window.location.href = `${window.location.origin}?${queryString}`;
-	};
-
-	// settings sync options
-	const settingsSyncOptions: ISettingsSyncOptions | undefined = config.settingsSyncOptions ? {
-		enabled: config.settingsSyncOptions.enabled,
-	} : undefined;
+	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents, workspaceUri?: UriComponents } = { ...JSON.parse(configElementAttribute), remoteAuthority: location.host }
 
 	// Finally create workbench
 	create(document.body, {
 		...config,
-		/**
-		 * Ensure the remote authority points to the current address since we cannot
-		 * determine this reliably on the backend.
-		 * @author coder
-		 */
-		remoteAuthority,
+		// TODO@jsjoeio - to test this just open a webview.
+		// Note to self as well - in each patch, explain how to test that it works
+		// Ideally it's automated. If not, do this.
 		/**
 		 * Override relative URLs in the product configuration against the window
 		 * location as necessary. Only paths that must be absolute need to be
@@ -699,28 +555,15 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 				).toString(),
 			),
 		},
-		developmentOptions: {
-			logLevel: logLevel ? parseLogLevel(logLevel) : undefined,
-			...config.developmentOptions
-		},
-		settingsSyncOptions,
-		homeIndicator,
-		windowIndicator,
-		welcomeBanner,
-		productQualityChangeHandler,
-		workspaceProvider,
-		urlCallbackProvider: new PollingURLCallbackProvider(),
-		credentialsProvider: new LocalStorageCredentialsProvider()
-=======
-	// Create workbench
-	create(document.body, {
-		...config,
+		// TODO@jsjoeio - make sure the logLevel works
+		// set log level --log trace
+		// Open the console in the browser and you'll see a bunch of trace logs
+		// If you open and see none, it is not working
 		settingsSyncOptions: config.settingsSyncOptions ? {
 			enabled: config.settingsSyncOptions.enabled,
 		} : undefined,
 		workspaceProvider: WorkspaceProvider.create(config),
 		urlCallbackProvider: new LocalStorageURLCallbackProvider(),
 		credentialsProvider: config.remoteAuthority ? undefined : new LocalStorageCredentialsProvider() // with a remote, we don't use a local credentials provider
->>>>>>> upstream/release/1.64
 	});
 })();
