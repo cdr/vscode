@@ -9,7 +9,7 @@ import * as url from 'url';
 import * as util from 'util';
 import * as cookie from 'cookie';
 import * as crypto from 'crypto';
-import { isEqualOrParent, sanitizeFilePath } from 'vs/base/common/extpath';
+import { isEqualOrParent } from 'vs/base/common/extpath';
 import { getMediaMime } from 'vs/base/common/mime';
 import { isLinux } from 'vs/base/common/platform';
 import { ILogService } from 'vs/platform/log/common/log';
@@ -33,8 +33,6 @@ import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { createRemoteURITransformer } from 'vs/server/node/remoteUriTransformer';
-import { cwd } from 'vs/base/common/process';
 
 const textMimeType = {
 	'.html': 'text/html',
@@ -89,8 +87,6 @@ export class WebClientServer {
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
-		// NOTE@coder
-		// TODO@jsjoeio - I think we need to add theme service
 		@IThemeService private readonly _themeService: IServerThemeService,
 		@IProductService private readonly _productService: IProductService,
 	) {
@@ -165,12 +161,6 @@ export class WebClientServer {
 		}
 	}
 
-<<<<<<< HEAD:src/vs/server/webClientServer.ts
-	// private _hasCorrectTokenCookie(req: http.IncomingMessage): boolean {
-	// 	const cookies = cookie.parse(req.headers.cookie || '');
-	// 	return (cookies['vscode-tkn'] === this._connectionToken);
-	// }
-
 	private async fetchClientTheme(): Promise<ClientTheme> {
 		await this._themeService.readyPromise;
 		const theme = await this._themeService.fetchColorThemeData();
@@ -209,8 +199,6 @@ export class WebClientServer {
 		return res.end(JSON.stringify(webManifest, null, 2));
 	}
 
-=======
->>>>>>> upstream/release/1.64:src/vs/server/node/webClientServer.ts
 	/**
 	 * Handle HTTP requests for /static/*
 	 */
@@ -261,7 +249,7 @@ export class WebClientServer {
 	 */
 	private async _handleWebExtensionResource(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
 		if (!this._webExtensionResourceUrlTemplate) {
-			return serveError(req, res, 500, 'No extension gallery service configured.');
+			return this.serveError(req, res, 500, 'No extension gallery service configured.');
 		}
 
 		// Strip `/web-extension-resource/` from the path
@@ -274,7 +262,7 @@ export class WebClientServer {
 		});
 
 		if (this._getResourceURLTemplateAuthority(this._webExtensionResourceUrlTemplate) !== this._getResourceURLTemplateAuthority(uri)) {
-			return serveError(req, res, 403, 'Request Forbidden');
+			return this.serveError(req, res, 403, 'Request Forbidden');
 		}
 
 		const headers: IHeaders = {};
@@ -303,7 +291,7 @@ export class WebClientServer {
 			try {
 				text = await asText(context);
 			} catch (error) {/* Ignore */ }
-			return serveError(req, res, status, text || `Request failed with status ${status}`);
+			return this.serveError(req, res, status, text || `Request failed with status ${status}`);
 		}
 
 		const responseHeaders: Record<string, string> = Object.create(null);
@@ -538,9 +526,7 @@ export class WebClientServer {
 			}
 		}
 
-		// TODO@jsjoeio - may need to add fetchClientTheme back in
-		// Check later
-		// const clientTheme = await this.fetchClientTheme();
+		const clientTheme = await this.fetchClientTheme();
 
 		res.setHeader('Content-Type', 'text/html');
 
@@ -550,8 +536,8 @@ export class WebClientServer {
 			.replace(/{{ERROR_CODE}}/g, () => code.toString())
 			.replace(/{{ERROR_MESSAGE}}/g, () => message)
 			.replace(/{{ERROR_FOOTER}}/g, () => `${version} - ${commit}`)
-			// .replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => clientTheme.backgroundColor)
-			// .replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => clientTheme.foregroundColor)
+			.replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => clientTheme.backgroundColor)
+			.replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => clientTheme.foregroundColor)
 			.replace(/{{BASE}}/g, () => relativePath(getOriginalUrl(req)));
 
 		res.end(data);
