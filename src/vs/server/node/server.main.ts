@@ -16,9 +16,6 @@ import { serverOptions, ServerParsedArgs } from 'vs/server/node/serverEnvironmen
 import product from 'vs/platform/product/common/product';
 import * as perf from 'vs/base/common/performance';
 
-// NOTE@coder: We already have the arguments so this file has been patched to
-// support passing them in.
-
 perf.mark('code/server/codeLoaded');
 (<any>global).vscodeServerCodeLoadedTime = performance.now();
 
@@ -40,8 +37,8 @@ function parse() {
 	return parseArgs(process.argv.slice(2), serverOptions, errorReporter);
 }
 
-// NOTE@coder: I deleted args['server-data-dir'] from REMOTE_DATA_FOLDER
-// because we don't have access to args here. I am not sure if that will break something.
+// NOTE@coder: We already have the arguments so this file has been patched to
+// support passing them in.
 const REMOTE_DATA_FOLDER = process.env['VSCODE_AGENT_FOLDER'] || join(os.homedir(), product.serverDataFolderName || '.vscode-remote');
 const USER_DATA_PATH = join(REMOTE_DATA_FOLDER, 'data');
 const APP_SETTINGS_HOME = join(USER_DATA_PATH, 'User');

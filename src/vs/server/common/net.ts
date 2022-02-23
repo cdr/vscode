@@ -14,14 +14,8 @@ export interface WebManifest {
 	short_name: string;
 	start_url: string;
 	display: string;
-	'background-color': string;
 	description: string;
 	icons: Array<{ src: string; type: string; sizes: string }>;
-}
-
-export interface ClientTheme {
-	backgroundColor: string;
-	foregroundColor: string;
 }
 
 export const ICON_SIZES = [192, 512];

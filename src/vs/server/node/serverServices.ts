@@ -206,10 +206,6 @@ export async function setupServerServices(connectionToken: ServerConnectionToken
 		const localizationsChannel = ProxyChannel.fromService<RemoteAgentConnectionContext>(accessor.get(ILocalizationsService));
 		socketServer.registerChannel('localizations', localizationsChannel);
 
-		// NOTE@coder
-		// TODO@jsjoeio
-		// We used to have a a theme service. Might need to drop it in here too.
-
 		const encryptionChannel = ProxyChannel.fromService<RemoteAgentConnectionContext>(accessor.get(IEncryptionMainService));
 		socketServer.registerChannel('encryption', encryptionChannel);
 

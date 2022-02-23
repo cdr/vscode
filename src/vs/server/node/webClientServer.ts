@@ -20,9 +20,7 @@ import { generateUuid } from 'vs/base/common/uuid';
 import { IProductService } from 'vs/platform/product/common/productService';
 // eslint-disable-next-line code-import-patterns
 import type { IWorkbenchConstructionOptions } from 'vs/workbench/workbench.web.main';
-import { editorBackground, editorForeground } from 'vs/platform/theme/common/colorRegistry';
-import { ClientTheme, getOriginalUrl, HTTPNotFoundError, relativePath, relativeRoot, WebManifest } from 'vs/server/common/net';
-import { IServerThemeService } from 'vs/server/node/serverThemeService';
+import { getOriginalUrl, HTTPNotFoundError, relativePath, relativeRoot, WebManifest } from 'vs/server/common/net';
 import { ServerConnectionToken, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
 import { asText, IRequestService } from 'vs/platform/request/common/request';
 import { IHeaders } from 'vs/base/parts/request/common/request';
@@ -85,7 +83,6 @@ export class WebClientServer {
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
 		@IProductService private readonly _productService: IProductService,
-		@IServerThemeService private readonly _themeService: IServerThemeService,
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
 	}
@@ -158,16 +155,6 @@ export class WebClientServer {
 		}
 	}
 
-	private async fetchClientTheme(): Promise<ClientTheme> {
-		await this._themeService.readyPromise;
-		const theme = await this._themeService.fetchColorThemeData();
-
-		return {
-			backgroundColor: theme.getColor(editorBackground, true)!.toString(),
-			foregroundColor: theme.getColor(editorForeground, true)!.toString(),
-		};
-	}
-
 	private _iconSizes = [192, 512];
 
 	/**
@@ -176,13 +163,11 @@ export class WebClientServer {
 	private async _handleManifest(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
 		// The manifest URL is used as the base when resolving URLs so we can just
 		// use . without having to check the depth since we serve it at the root.
-		const clientTheme = await this.fetchClientTheme();
 		const webManifest: WebManifest = {
 			name: this._productService.nameLong,
 			short_name: this._productService.nameShort,
 			start_url: '.',
 			display: 'fullscreen',
-			'background-color': clientTheme.backgroundColor,
 			description: 'Run editors on a remote server.',
 			icons: this._iconSizes.map((size => ({
 				src: `./static/resources/server/code-${size}.png`,
@@ -315,7 +300,6 @@ export class WebClientServer {
 			return this.serveError(req, res, 400, `Bad request.`, parsedUrl);
 		}
 
-		// const { backgroundColor, foregroundColor } = await this.fetchClientTheme();
 		const queryConnectionToken = parsedUrl.query[connectionTokenQueryName];
 		if (typeof queryConnectionToken === 'string') {
 			// We got a connection token as a query parameter.
@@ -424,8 +408,6 @@ export class WebClientServer {
 				},
 			})))
 			.replace(/{{NLS_CONFIGURATION}}/g, () => escapeAttribute(JSON.stringify(nlsConfiguration)))
-			// .replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => backgroundColor)
-			// .replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => foregroundColor)
 			.replace('{{WORKBENCH_AUTH_SESSION}}', () => authSessionInfo ? escapeAttribute(JSON.stringify(authSessionInfo)) : '')
 			.replace(/{{BASE}}/g, () => vscodeBase);
 
@@ -523,8 +505,6 @@ export class WebClientServer {
 			}
 		}
 
-		const clientTheme = await this.fetchClientTheme();
-
 		res.setHeader('Content-Type', 'text/html');
 
 		const filePath = FileAccess.asFileUri('vs/code/browser/workbench/workbench-error.html', require).fsPath;
@@ -533,8 +513,6 @@ export class WebClientServer {
 			.replace(/{{ERROR_CODE}}/g, () => code.toString())
 			.replace(/{{ERROR_MESSAGE}}/g, () => message)
 			.replace(/{{ERROR_FOOTER}}/g, () => `${version} - ${commit}`)
-			.replace(/{{CLIENT_BACKGROUND_COLOR}}/g, () => clientTheme.backgroundColor)
-			.replace(/{{CLIENT_FOREGROUND_COLOR}}/g, () => clientTheme.foregroundColor)
 			.replace(/{{BASE}}/g, () => relativePath(getOriginalUrl(req)));
 
 		res.end(data);
