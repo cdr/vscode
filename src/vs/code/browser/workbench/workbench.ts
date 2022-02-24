@@ -299,10 +299,12 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		query.forEach((value, key) => {
 			switch (key) {
 
+				// NOTE@coder
 				// TODO@jsjoeio
-				// We need to test that...
-				// 1. If you do File > Open Folder (it should use short version without vscode version)
-				// 2. If you do folder?=/path/to/folder in the URI, it should work.
+				// It seems there may be a bug
+				// When you first start code-server, it appends the folder param
+				// But it doesn't use friendly characters
+				// Example: http://localhost:3000/?folder=%2FUsers%2Fjp%2Fdev%2Ffolder-for-testing
 				// Folder
 				case WorkspaceProvider.QUERY_PARAM_FOLDER:
 					if (config.remoteAuthority && value.startsWith(posix.sep)) {
@@ -538,9 +540,6 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 	// Finally create workbench
 	create(document.body, {
 		...config,
-		// TODO@jsjoeio - to test this just open a webview.
-		// Note to self as well - in each patch, explain how to test that it works
-		// Ideally it's automated. If not, do this.
 		/**
 		 * Override relative URLs in the product configuration against the window
 		 * location as necessary. Only paths that must be absolute need to be
@@ -560,10 +559,6 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 				).toString(),
 			),
 		},
-		// TODO@jsjoeio - make sure the logLevel works
-		// set log level --log trace
-		// Open the console in the browser and you'll see a bunch of trace logs
-		// If you open and see none, it is not working
 		settingsSyncOptions: config.settingsSyncOptions ? {
 			enabled: config.settingsSyncOptions.enabled,
 		} : undefined,
