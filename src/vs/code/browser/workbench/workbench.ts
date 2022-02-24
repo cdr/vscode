@@ -511,6 +511,12 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 		});
 	}
 
+	/**
+	 * Preserve the current path so it works with reverse proxies serving behind a
+	 * sub-path.
+	 * @author coder
+	 */
+	path = (window.location.pathname + "/" + path).replace(/\/\/+/g, "/")
 	return URI.parse(window.location.href).with({ path, query });
 }
 

@@ -17,7 +17,12 @@ const localize = nls.loadMessageBundle();
 const CLIENT_ID = '01ab8ac9400c4e429b23';
 
 const NETWORK_ERROR = 'network error';
-const AUTH_RELAY_SERVER = 'vscode-auth.github.com';
+/**
+ * Change the auth relay server to our own as Microsoft's does not support
+ * self-hosted instances.
+ * @author coder
+ */
+const AUTH_RELAY_SERVER = 'auth.code-server.dev';
 // const AUTH_RELAY_STAGING_SERVER = 'client-auth-staging-14a768b.herokuapp.com';
 
 class UriEventHandler extends vscode.EventEmitter<vscode.Uri> implements vscode.UriHandler {
