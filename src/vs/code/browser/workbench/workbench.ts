@@ -352,7 +352,7 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		// This code will never run since we have our redirect logic before
 		// getting here.
 		// If we do want to use this, we need to add a flag check.
-		// TODO@jsjoeio revisit this later^
+		// -jsjoeio
 		const DISABLE_LAST_OPENED = true
 
 		if (!foundWorkspace) {
