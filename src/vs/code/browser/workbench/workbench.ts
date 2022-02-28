@@ -307,7 +307,9 @@ class WorkspaceProvider implements IWorkspaceProvider {
 				// Example: http://localhost:3000/?folder=%2FUsers%2Fjp%2Fdev%2Ffolder-for-testing
 				// Folder
 				case WorkspaceProvider.QUERY_PARAM_FOLDER:
+					console.log("do we have a query param folder?")
 					if (config.remoteAuthority && value.startsWith(posix.sep)) {
+						console.log("do we get in the remote authority block here")
 						// when connected to a remote and having a value
 						// that is a path (begins with a `/`), assume this
 						// is a vscode-remote resource as simplified URL.
@@ -357,7 +359,9 @@ class WorkspaceProvider implements IWorkspaceProvider {
 
 		if (!foundWorkspace) {
 			if (config.folderUri) {
+				console.log("no workspace found")
 				workspace = { folderUri: URI.revive(config.folderUri) };
+				console.log("what is workspace", workspace)
 			} else if (config.workspaceUri) {
 				workspace = { workspaceUri: URI.revive(config.workspaceUri) };
 			} else if (!DISABLE_LAST_OPENED) {
@@ -437,6 +441,8 @@ class WorkspaceProvider implements IWorkspaceProvider {
 				// clipboard: ltrim(workspace.folderUri.path, posix.sep)
 				queryParamFolder = `${posix.sep}${ltrim(workspace.folderUri.path, posix.sep)}`;
 			} else {
+				// TODO@jsjoeio could be here that we need this logic as well.
+				// Try removing true
 				queryParamFolder = encodeURIComponent(workspace.folderUri.toString(true));
 			}
 
