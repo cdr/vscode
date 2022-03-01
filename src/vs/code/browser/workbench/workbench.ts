@@ -18,6 +18,7 @@ import { parseLogLevel } from 'vs/platform/log/common/log';
 import product from 'vs/platform/product/common/product';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
 import { create, ICredentialsProvider, IHomeIndicator, IProductQualityChangeHandler, ISettingsSyncOptions, IURLCallbackProvider, IWelcomeBanner, IWindowIndicator, IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } from 'vs/workbench/workbench.web.api';
+import { equals as arrayEquals } from 'vs/base/common/arrays';
 
 function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 	let query: string | undefined = undefined;
@@ -49,6 +50,14 @@ interface ICredential {
 	password: string;
 }
 
+/** @author coder */
+interface IToken {
+	accessToken: string
+	account?: { label: string }
+	id: string
+	scopes: string[]
+}
+
 class LocalStorageCredentialsProvider implements ICredentialsProvider {
 
 	static readonly CREDENTIALS_OPENED_KEY = 'credentials.provider';
@@ -76,6 +85,61 @@ class LocalStorageCredentialsProvider implements ICredentialsProvider {
 				scopes,
 				accessToken: authSessionInfo!.accessToken
 			}))));
+
+			/**
+			 * Add tokens for extensions to use.  This works for extensions like the
+			 * pull requests one or GitLens.
+			 * @author coder
+			 */
+			const extensionId = `vscode.${authSessionInfo.providerId}-authentication`;
+			const service = `${product.urlProtocol}${extensionId}`;
+			const account = `${authSessionInfo.providerId}.auth`;
+			// Oddly the scopes need to match exactly so we cannot just have one token
+			// with all the scopes, instead we have to duplicate the token for each
+			// expected set of scopes.
+			const tokens: IToken[] = authSessionInfo.scopes.map((scopes) => ({
+				id: authSessionInfo!.id,
+				scopes: scopes.sort(), // Sort for comparing later.
+				accessToken: authSessionInfo!.accessToken,
+			}));
+			this.getPassword(service, account).then((raw) => {
+				let existing: {
+					content: IToken[]
+				} | undefined;
+
+				if (raw) {
+					try {
+						const json = JSON.parse(raw);
+						json.content = JSON.parse(json.content);
+						existing = json;
+					} catch (error) {
+						console.log(error);
+					}
+				}
+
+				// Keep tokens for account and scope combinations we do not have in case
+				// there is an extension that uses scopes we have not accounted for (in
+				// these cases the user will need to manually authenticate the extension
+				// through the UI) or the user has tokens for other accounts.
+				if (existing?.content) {
+					existing.content = existing.content.filter((existingToken) => {
+						const scopes = existingToken.scopes.sort();
+						return !(tokens.find((token) => {
+							return arrayEquals(scopes, token.scopes)
+								&& token.account?.label === existingToken.account?.label;
+						}))
+					})
+				}
+
+				return this.setPassword(service, account, JSON.stringify({
+					extensionId,
+					...(existing || {}),
+					content: JSON.stringify([
+						...tokens,
+						...(existing?.content || []),
+					])
+				}));
+			})
 		}
 	}
 
@@ -446,7 +510,7 @@ class WindowIndicator implements IWindowIndicator {
 	/**
 	 * If the value begins with a slash assume it is a file path and convert it to
 	 * use the vscode-remote scheme.
-	 * 
+	 *
 	 * We also add the remote authority in toRemote. It needs to be accurate
 	 * otherwise other URIs won't match it, leading to issues such as this one:
 	 * https://github.com/coder/code-server/issues/4630

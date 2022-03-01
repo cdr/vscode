@@ -295,7 +295,12 @@ export class WebClientServer {
 			id: generateUuid(),
 			providerId: 'github',
 			accessToken: this._environmentService.args['github-auth'],
-			scopes: [['user:email'], ['repo']]
+			/**
+			 * Add a set of scopes for the pull request extension which also wants
+			 * read:user.
+			 * @author coder
+			 */
+			scopes: [['read:user', 'user:email', 'repo'], ['user:email'], ['repo']]
 		} : undefined;
 
 		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource);
