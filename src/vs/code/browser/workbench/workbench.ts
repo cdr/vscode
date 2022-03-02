@@ -299,12 +299,6 @@ class WorkspaceProvider implements IWorkspaceProvider {
 		query.forEach((value, key) => {
 			switch (key) {
 
-				// NOTE@coder
-				// TODO@jsjoeio
-				// It seems there may be a bug
-				// When you first start code-server, it appends the folder param
-				// But it doesn't use friendly characters
-				// Example: http://localhost:3000/?folder=%2FUsers%2Fjp%2Fdev%2Ffolder-for-testing
 				// Folder
 				case WorkspaceProvider.QUERY_PARAM_FOLDER:
 					console.log("do we have a query param folder?")
@@ -441,8 +435,6 @@ class WorkspaceProvider implements IWorkspaceProvider {
 				// clipboard: ltrim(workspace.folderUri.path, posix.sep)
 				queryParamFolder = `${posix.sep}${ltrim(workspace.folderUri.path, posix.sep)}`;
 			} else {
-				// TODO@jsjoeio could be here that we need this logic as well.
-				// Try removing true
 				queryParamFolder = encodeURIComponent(workspace.folderUri.toString(true));
 			}
 

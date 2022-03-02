@@ -364,9 +364,6 @@ export class WebClientServer {
 		const vscodeBase = relativePath(getOriginalUrl(req))
 		const data = (await util.promisify(fs.readFile)(filePath)).toString()
 			.replace('{{WORKBENCH_WEB_CONFIGURATION}}', escapeAttribute(JSON.stringify(<IWorkbenchConstructionOptions>{
-				// TODO@jsjoeio check if this still works (passing them via the CLI)
-				// folderUri: (workspacePath && isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
-				// workspaceUri: (workspacePath && !isFolder) ? transformer.transformOutgoing(URI.file(workspacePath)) : undefined,
 				remoteAuthority,
 				_wrapWebWorkerExtHostInIframe,
 				developmentOptions: {
@@ -395,8 +392,6 @@ export class WebClientServer {
 					webEndpointUrlTemplate: vscodeBase + '/static',
 					webviewContentExternalBaseUrlTemplate: vscodeBase + '/webview/{{uuid}}/',
 					updateUrl: base + '/update/check',
-					// NOTE@coder
-					// TODO@jsjoeio - we need to test web extensions and make sure they still work.
 					extensionsGallery: this._webExtensionResourceUrlTemplate ? {
 						...this._productService.extensionsGallery,
 						'resourceUrlTemplate': this._webExtensionResourceUrlTemplate.with({
@@ -517,29 +512,4 @@ export class WebClientServer {
 
 		res.end(data);
 	};
-
-	// TODO@jsjoeio maybe delete this
-	// private async _getWorkspaceFromCLI(): Promise<{ workspacePath?: string, isFolder?: boolean }> {
-
-	// 	// check for workspace argument
-	// 	const workspaceCandidate = this._environmentService.args['workspace'];
-	// 	if (workspaceCandidate && workspaceCandidate.length > 0) {
-	// 		const workspace = sanitizeFilePath(workspaceCandidate, cwd());
-	// 		if (await util.promisify(fs.exists)(workspace)) {
-	// 			return { workspacePath: workspace };
-	// 		}
-	// 	}
-
-	// 	// check for folder argument
-	// 	const folderCandidate = this._environmentService.args['folder'];
-	// 	if (folderCandidate && folderCandidate.length > 0) {
-	// 		const folder = sanitizeFilePath(folderCandidate, cwd());
-	// 		if (await util.promisify(fs.exists)(folder)) {
-	// 			return { workspacePath: folder, isFolder: true };
-	// 		}
-	// 	}
-
-	// 	// empty window otherwise
-	// 	return {};
-	// }
 }
