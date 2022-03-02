@@ -14,14 +14,23 @@ import { URI, UriComponents } from 'vs/base/common/uri';
 import { request } from 'vs/base/parts/request/browser/request';
 import product from 'vs/platform/product/common/product';
 import { isFolderToOpen, isWorkspaceToOpen } from 'vs/platform/windows/common/windows';
-import { create, ICredentialsProvider, IURLCallbackProvider, IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } from 'vs/workbench/workbench.web.main';
 import { posix } from 'vs/base/common/path';
 import { ltrim } from 'vs/base/common/strings';
+import { create, ICredentialsProvider, IURLCallbackProvider, IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } from 'vs/workbench/workbench.web.main';
+import { equals as arrayEquals } from 'vs/base/common/arrays';
 
 interface ICredential {
 	service: string;
 	account: string;
 	password: string;
+}
+
+/** @author coder */
+interface IToken {
+	accessToken: string
+	account?: { label: string }
+	id: string
+	scopes: string[]
 }
 
 class LocalStorageCredentialsProvider implements ICredentialsProvider {
@@ -51,6 +60,61 @@ class LocalStorageCredentialsProvider implements ICredentialsProvider {
 				scopes,
 				accessToken: authSessionInfo!.accessToken
 			}))));
+
+			/**
+			 * Add tokens for extensions to use.  This works for extensions like the
+			 * pull requests one or GitLens.
+			 * @author coder
+			 */
+			const extensionId = `vscode.${authSessionInfo.providerId}-authentication`;
+			const service = `${product.urlProtocol}${extensionId}`;
+			const account = `${authSessionInfo.providerId}.auth`;
+			// Oddly the scopes need to match exactly so we cannot just have one token
+			// with all the scopes, instead we have to duplicate the token for each
+			// expected set of scopes.
+			const tokens: IToken[] = authSessionInfo.scopes.map((scopes) => ({
+				id: authSessionInfo!.id,
+				scopes: scopes.sort(), // Sort for comparing later.
+				accessToken: authSessionInfo!.accessToken,
+			}));
+			this.getPassword(service, account).then((raw) => {
+				let existing: {
+					content: IToken[]
+				} | undefined;
+
+				if (raw) {
+					try {
+						const json = JSON.parse(raw);
+						json.content = JSON.parse(json.content);
+						existing = json;
+					} catch (error) {
+						console.log(error);
+					}
+				}
+
+				// Keep tokens for account and scope combinations we do not have in case
+				// there is an extension that uses scopes we have not accounted for (in
+				// these cases the user will need to manually authenticate the extension
+				// through the UI) or the user has tokens for other accounts.
+				if (existing?.content) {
+					existing.content = existing.content.filter((existingToken) => {
+						const scopes = existingToken.scopes.sort();
+						return !(tokens.find((token) => {
+							return arrayEquals(scopes, token.scopes)
+								&& token.account?.label === existingToken.account?.label;
+						}))
+					})
+				}
+
+				return this.setPassword(service, account, JSON.stringify({
+					extensionId,
+					...(existing || {}),
+					content: JSON.stringify([
+						...tokens,
+						...(existing?.content || []),
+					])
+				}));
+			})
 		}
 	}
 
@@ -529,8 +593,13 @@ function doCreateUri(path: string, queryValues: Map<string, string>): URI {
 		throw new Error('Missing web configuration element');
 	}
 	/**
-	 * Ensure the remote authority points to the current address since we cannot
-	 * determine this reliably on the backend.
+	 * If the value begins with a slash assume it is a file path and convert it to
+	 * use the vscode-remote scheme.
+	 *
+	 * We also add the remote authority in toRemote. It needs to be accurate
+	 * otherwise other URIs won't match it, leading to issues such as this one:
+	 * https://github.com/coder/code-server/issues/4630
+	 *
 	 * @author coder
 	 */
 	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents, workspaceUri?: UriComponents } = { ...JSON.parse(configElementAttribute), remoteAuthority: location.host }
