@@ -83,8 +83,6 @@ declare global {
 			'builtin-extensions-dir'?: string;
 
 			// web
-			workspace: string;
-			folder: string;
 			'web-user-data-dir'?: string;
 			'enable-sync'?: boolean;
 			'github-auth'?: string;
