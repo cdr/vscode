@@ -37,7 +37,14 @@ export class BrowserStorageService extends AbstractStorageService {
 	}
 
 	private getId(scope: StorageScope): string {
-		return scope === StorageScope.GLOBAL ? 'global' : this.payload.id;
+		/**
+		 * Add a unique ID based on the current path for per-workspace databases.
+		 * This prevents workspaces on different machines that share the same domain
+		 * and file path from colliding (since it does not appear IndexedDB can be
+		 * scoped to a path) as long as they are hosted on different paths.
+		 * @author coder
+		 */
+		return scope === StorageScope.GLOBAL ? 'global' : (this.payload.id + '-' + hash(location.pathname.toString().replace(/\/$/, "")).toString(16));
 	}
 
 	protected async doInitialize(): Promise<void> {
@@ -76,6 +83,24 @@ export class BrowserStorageService extends AbstractStorageService {
 		const firstWorkspaceOpen = this.workspaceStorage.getBoolean(IS_NEW_KEY);
 		if (firstWorkspaceOpen === undefined) {
 			this.workspaceStorage.set(IS_NEW_KEY, true);
+			/**
+			 * Migrate the old database.
+			 * @author coder
+			 */
+			let db: IIndexedDBStorageDatabase | undefined
+			try {
+				db = await IndexedDBStorageDatabase.create({ id: this.payload.id }, this.logService)
+				const items = await db.getItems()
+				for (const [key, value] of items) {
+					this.workspaceStorage.set(key, value);
+				}
+			} catch (error) {
+				this.logService.error(`[IndexedDB Storage ${this.payload.id}] migrate error: ${toErrorMessage(error)}`);
+			} finally {
+				if (db) {
+					db.close()
+				}
+			}
 		} else if (firstWorkspaceOpen) {
 			this.workspaceStorage.set(IS_NEW_KEY, false);
 		}
@@ -215,15 +240,7 @@ export class IndexedDBStorageDatabase extends Disposable implements IIndexedDBSt
 	) {
 		super();
 
-		/**
-		 * Add a unique ID based on the current path.  This prevents workspaces on
-		 * different machines that share the same domain and file path from
-		 * colliding (since it does not appear IndexedDB can be scoped to a path) as
-		 * long as they are hosted on different paths.
-		 * @author coder
-		 */
-		const windowId = hash(location.pathname.toString()).toString(16);
-		this.name = `${IndexedDBStorageDatabase.STORAGE_DATABASE_PREFIX}${windowId}-${options.id}`;
+		this.name = `${IndexedDBStorageDatabase.STORAGE_DATABASE_PREFIX}${options.id}`;
 		this.broadcastChannel = options.broadcastChanges && ('BroadcastChannel' in window) ? new BroadcastChannel(IndexedDBStorageDatabase.STORAGE_BROADCAST_CHANNEL) : undefined;
 
 		this.whenConnected = this.connect();
