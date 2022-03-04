@@ -10,17 +10,16 @@ fi
 function code() {
 	cd $ROOT
 
-	# # Sync built-in extensions
-	# yarn download-builtin-extensions
+	# Get electron, compile, built-in extensions
+	if [[ -z "${VSCODE_SKIP_PRELAUNCH}" ]]; then
+		node build/lib/preLaunch.js
+	fi
 
-	# NOTE@coder: Never load the remote node
-	# This leads to Node discrepencies between
-	# local and remote and causes issues.
-	# NODE=$(node build/lib/node.js)
-	# if [ ! -e $NODE ];then
+	NODE=$(node build/lib/node.js)
+	if [ ! -e $NODE ];then
 		# Load remote node
-		# yarn gulp node
-	# fi
+		yarn gulp node
+	fi
 
 	NODE_ENV=development \
 	VSCODE_DEV=1 \
