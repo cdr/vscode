@@ -1,6 +1,6 @@
 <!-- Copyright (C) Microsoft Corporation. All rights reserved. -->
 <!DOCTYPE html>
-<html style="--vs-theme-background-color: {{CLIENT_BACKGROUND_COLOR}}; --vs-theme-foreground-color: {{CLIENT_FOREGROUND_COLOR}}">
+<html>
 	<head>
 		<script>
 			performance.mark('code/didStartRenderer');
@@ -32,12 +32,10 @@
 
 		<link rel="icon" href="{{BASE}}/favicon.ico" type="image/x-icon" />
 		<link rel="manifest" href="{{BASE}}/manifest.json" crossorigin="use-credentials">
-		<meta name="theme-color" content="{{CLIENT_BACKGROUND_COLOR}}">
-
-		<link data-name="vs/workbench/workbench.web.api" rel="stylesheet" href="{{BASE}}/static/out/vs/workbench/workbench.web.api.css">
+		<link data-name="vs/workbench/workbench.web.main" rel="stylesheet" href="{{BASE}}/static/out/vs/workbench/workbench.web.main.css">
 	</head>
 
-	<body style="background-color: var(--vs-theme-background-color); color: var(--vs-theme-foreground-color)" aria-label="">
+	<body aria-label="">
 	</body>
 
 	<!-- Startup (do not modify order of script tags!) -->
@@ -88,7 +86,7 @@
 	<script>
 		performance.mark('code/willLoadWorkbenchMain');
 	</script>
-	<script src="{{BASE}}/static/out/vs/workbench/workbench.web.api.nls.js"></script>
-	<script src="{{BASE}}/static/out/vs/workbench/workbench.web.api.js"></script>
+	<script src="{{BASE}}/static/out/vs/workbench/workbench.web.main.nls.js"></script>
+	<script src="{{BASE}}/static/out/vs/workbench/workbench.web.main.js"></script>
 	<script src="{{BASE}}/static/out/vs/code/browser/workbench/workbench.js"></script>
 </html>
